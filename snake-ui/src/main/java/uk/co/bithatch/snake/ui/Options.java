@@ -77,8 +77,6 @@ public class Options extends AbstractDeviceController implements Listener, Prefe
 	@FXML
 	private ToggleGroup trayIconGroup;
 	@FXML
-	private CheckBox betas;
-	@FXML
 	private CheckBox updateAutomatically;
 	@FXML
 	private CheckBox checkForUpdates;
@@ -125,20 +123,6 @@ public class Options extends AbstractDeviceController implements Listener, Prefe
 				ps.setCheckForUpdates(checkForUpdates.selectedProperty().get());
 				updates.visibleProperty().set(ps.isUpdateAvailable() && ps.isCheckForUpdates());
 			});
-			betas.selectedProperty().set(ps.isBetas());
-			betas.selectedProperty().addListener((e) -> {
-				ps.setBetas(betas.selectedProperty().get());
-				startUpdate.disableProperty().set(true);
-				new Thread() {
-					public void run() {
-						try {
-							Thread.sleep(3000);
-						} catch (Exception e) {
-						}
-						System.exit(90);
-					}
-				}.start();
-			});
 			updates.visibleProperty().set(ps.isUpdateAvailable() && ps.isCheckForUpdates());
 			updates.managedProperty().bind(updates.visibleProperty());
 			updates.getStyleClass().add("warning");
@@ -163,7 +147,6 @@ public class Options extends AbstractDeviceController implements Listener, Prefe
 		} else {
 			updatesContainer.visibleProperty().set(false);
 		}
-		betas.disableProperty().bind(Bindings.not(checkForUpdates.selectedProperty()));
 		updateAutomatically.disableProperty().bind(Bindings.not(checkForUpdates.selectedProperty()));
 		checkForUpdates.managedProperty().bind(checkForUpdates.visibleProperty());
 		startOnLogin.selectedProperty().addListener((e) -> {
@@ -250,7 +233,8 @@ public class Options extends AbstractDeviceController implements Listener, Prefe
 
 	@FXML
 	void evtStartUpdate() {
-		System.exit(100);
+		startUpdate.disableProperty().set(true);
+		PlatformService.get().startUpdate();
 	}
 
 	@FXML

@@ -10,9 +10,9 @@
 	</parent>
 
 	<scm>
-		<url>https://github.com/bithatch/snake/</url>
-		<connection>scm:git:https://github.com/bithatch/snake.git</connection>
-		<developerConnection>scm:git:https://github.com/bithatch/snake.git</developerConnection>
+		<url>https://github.com/ScoobyDouche/snake/</url>
+		<connection>scm:git:https://github.com/ScoobyDouche/snake.git</connection>
+		<developerConnection>scm:git:https://github.com/ScoobyDouche/snake.git</developerConnection>
 	</scm>
 
 	<licenses>
@@ -117,32 +117,6 @@
 				<configuration>
 					<skip>true</skip>
 				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<version>3.0.1</version>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.1.0</version>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

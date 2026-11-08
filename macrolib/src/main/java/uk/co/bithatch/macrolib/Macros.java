@@ -57,7 +57,7 @@ public class Macros {
 		/* WORK OK */
 		bank.add(new UInputMacro(new KeySequence(EventCode.KEY_1), EventCode.KEY_2));
 		bank.add(new UInputMacro(new KeySequence(KeyState.UP, EventCode.KEY_2), EventCode.KEY_4).repeatMode(RepeatMode.NONE));
-		bank.add(new CommandMacro(new KeySequence(KeyState.UP, EventCode.KEY_3), "xdg-open", "http://www.bithatch.co.uk/"));
+		bank.add(new CommandMacro(new KeySequence(KeyState.UP, EventCode.KEY_3), "xdg-open", "https://github.com/ScoobyDouche/snake"));
 		bank.add(new SimpleMacro(new KeySequence(EventCode.KEY_4), "HelloWorld! 123456789 !\"£$%^&*()"));
 		bank.add(new ScriptMacro(new KeySequence(EventCode.KEY_5), "upress keyboard KEY_1", "delay 1000",
 				"urelease keyboard KEY_1"));

@@ -3,3 +3,5 @@
 *.classpath
 *.temp-*.txt
 /target/
+dependency-reduced-pom.xml
+target/

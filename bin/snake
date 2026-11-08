@@ -1,0 +1,75 @@
+#!/bin/sh
+# Snake launcher.
+#
+# Runs Snake from this git checkout. Builds it on first run, applies updates
+# from the fork's GitHub repository (origin/main) and restarts Snake when it
+# asks for an update. Only one copy runs at a time.
+#
+# Update settings (written by Snake's Options screen): ~/.config/snake/updates
+#   check=true|false   look for updates
+#   auto=true|false    install them when Snake starts
+# Log: ~/.cache/snake/launcher.log
+
+REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}/snake/updates"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/snake"
+LOG="$CACHE/launcher.log"
+ACTION="$CACHE/action"
+ICON="$REPO/snake-ui/src/main/resources/uk/co/bithatch/snake/ui/icons/app512.png"
+
+MVN="${MVN:-$(command -v mvn)}"
+[ -n "$MVN" ] || MVN="$HOME/.local/opt/apache-maven-3.9.9/bin/mvn"
+
+mkdir -p "$CACHE"
+# Keep the log short
+[ -f "$LOG" ] && tail -n 2000 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+
+setting() {
+	[ -f "$CFG" ] && sed -n "s/^$1=//p" "$CFG" | tail -n 1
+}
+
+notify() {
+	command -v notify-send >/dev/null 2>&1 && notify-send -i "$ICON" Snake "$1"
+	echo "$(date '+%F %T') $1" >>"$LOG"
+}
+
+build() {
+	(cd "$REPO" && "$MVN" -q -B -DskipTests install) >>"$LOG" 2>&1
+}
+
+update() {
+	cd "$REPO" || return 1
+	git fetch -q origin main >>"$LOG" 2>&1 || return 1
+	[ "$(git rev-list --count HEAD..origin/main)" -gt 0 ] || return 0
+	notify "Updating Snake..."
+	if git merge -q --ff-only origin/main >>"$LOG" 2>&1 && build; then
+		touch "$CACHE/updated"
+		notify "Snake updated to $(git log -1 --format=%h)."
+	else
+		notify "Snake update failed. See $LOG"
+		return 1
+	fi
+}
+
+# One copy only. The lock is held until Snake (which inherits it) exits.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/snake.lock"
+flock -n 9 || exit 0
+
+if [ ! -d "$REPO/snake-app-linux/target/classes" ]; then
+	notify "Building Snake for the first time..."
+	build || { notify "Snake build failed. See $LOG"; exit 1; }
+fi
+
+if [ "$(setting check)" != false ] && [ "$(setting auto)" != false ]; then
+	update
+fi
+
+while :; do
+	rm -f "$ACTION"
+	(cd "$REPO/snake-app-linux" && "$MVN" -q -o javafx:run -Djavafx.args="$*") >>"$LOG" 2>&1
+	case "$(cat "$ACTION" 2>/dev/null)" in
+	update) update ;;
+	restart) ;;
+	*) break ;;
+	esac
+done

@@ -40,4 +40,11 @@ public interface PlatformService {
 	String getInstalledVersion();
 
 	boolean isUpdated();
+
+	/**
+	 * Close Snake and have the launcher apply the available update, then restart.
+	 */
+	default void startUpdate() {
+		System.exit(100);
+	}
 }

@@ -9,58 +9,75 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.lang.System.Logger.Level;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import uk.co.bithatch.snake.ui.App;
 import uk.co.bithatch.snake.ui.PlatformService;
 
+/**
+ * Linux platform service for the fork.
+ * <p>
+ * Snake runs from its git checkout (see bin/snake). Updates come from the
+ * fork's GitHub repository: the app checks whether origin/main has new
+ * commits, and the launcher pulls, rebuilds and restarts. Settings shared with
+ * the launcher live in ~/.config/snake/updates.
+ */
 public class LinuxPlatformService implements PlatformService {
 
-	private static final String SNAKE_RAZER_DESKTOP = "snake-razer.desktop";
+	final static System.Logger LOG = System.getLogger(LinuxPlatformService.class.getName());
 
-	private static final String BETA_CHANNEL = System.getProperty("forker.betaChannel",
-			"http://www.bithatch.co.uk/repositories/snake/snapshot");
-	private static final String STABLE_CHANNEL = System.getProperty("forker.releaseChannel",
-			"http://www.bithatch.co.uk/repositories/snake/stable");
+	private static final String SNAKE_RAZER_DESKTOP = "snake-razer.desktop";
+	private static final String BRANCH = "main";
+
+	private static final Object lock = new Object();
+	private static boolean checked;
+	private static String installedVersion = "Unknown";
+	private static String availableVersion;
+	private static int behind;
+	private static Boolean updated;
+
+	public LinuxPlatformService() {
+		synchronized (lock) {
+			if (!checked) {
+				checked = true;
+				installedVersion = describe("HEAD");
+				ensureMenuEntry();
+				if (isCheckForUpdates() && getRepo() != null) {
+					Thread t = new Thread(this::checkForUpdates, "UpdateCheck");
+					t.setDaemon(true);
+					t.start();
+				}
+			}
+		}
+	}
 
 	@Override
 	public String getAvailableVersion() {
-		return System.getProperty("forker.availableVersion", getInstalledVersion());
+		return availableVersion == null ? getInstalledVersion() : availableVersion;
 	}
 
 	@Override
 	public String getInstalledVersion() {
-		return System.getProperty("forker.installedVersion", "Unknown");
+		return installedVersion;
 	}
 
 	@Override
 	public boolean isBetas() {
-		try {
-			Path appCfg = getAppCfg();
-			Path path = checkDir(appCfg).resolve("updates");
-			if (Files.exists(path))
-				return contains(path, "remote-manifest " + BETA_CHANNEL);
-			else {
-				path = checkDir(appCfg.toAbsolutePath().getParent()).resolve("app.cfg");
-				return Files.exists(path) && contains(path, "default-remote-manifest " + BETA_CHANNEL);
-			}
-		} catch (IOException ioe) {
-			return false;
-		}
+		return false;
 	}
 
 	@Override
 	public boolean isCheckForUpdates() {
-		try {
-			Path path = checkDir(getAppCfg()).resolve("updates");
-			return !Files.exists(path) || !contains(path, "update-on-exit") || contains(path, "update-on-exit 100");
-		} catch (IOException ioe) {
-			return false;
-		}
+		return !"false".equals(settings().getProperty("check"));
 	}
 
 	@Override
@@ -83,98 +100,192 @@ public class LinuxPlatformService implements PlatformService {
 
 	@Override
 	public boolean isUpdateableApp() {
-		return Files.exists(Paths.get("manifest.xml")) || isDev();
+		return getRepo() != null;
 	}
 
 	@Override
 	public boolean isUpdateAutomatically() {
-		try {
-			Path path = checkDir(getAppCfg()).resolve("updates");
-			return !Files.exists(path) || !contains(path, "update-on-exit") || contains(path, "update-on-exit 99");
-		} catch (IOException ioe) {
-			return false;
-		}
+		return !"false".equals(settings().getProperty("auto"));
 	}
 
 	@Override
 	public boolean isUpdateAvailable() {
-		return "true".equals(System.getProperty("forker.updateAvailable"));
+		return behind > 0;
 	}
 
 	@Override
 	public boolean isUpdated() {
-		return "true".equals(System.getProperty("forker.updated"));
+		synchronized (lock) {
+			if (updated == null) {
+				/* The launcher leaves this marker after a successful update */
+				Path marker = getCacheDir().resolve("updated");
+				updated = Files.exists(marker);
+				try {
+					Files.deleteIfExists(marker);
+				} catch (IOException e) {
+				}
+			}
+			return updated;
+		}
 	}
 
 	@Override
 	public void setBetas(boolean betas) {
-		reconfig(isCheckForUpdates(), isUpdateAutomatically(), betas);
+		/* No beta channel in the fork */
 	}
 
 	@Override
 	public void setCheckForUpdates(boolean checkForUpdates) {
-		reconfig(checkForUpdates, isUpdateAutomatically(), isBetas());
+		saveSetting("check", String.valueOf(checkForUpdates));
 	}
 
 	@Override
 	public void setStartOnLogin(boolean startOnLogin) throws IOException {
 		if (isStartOnLogin() != startOnLogin)
 			writeDesktopFile(getAutostartFile(), "Snake", "Control and configure your Razer devices", startOnLogin,
-					"-- --no-open");
+					"--no-open");
 	}
 
 	@Override
 	public void setUpdateAutomatically(boolean updateAutomatically) {
-		reconfig(isCheckForUpdates(), updateAutomatically, isBetas());
+		saveSetting("auto", String.valueOf(updateAutomatically));
 	}
 
-	protected Path checkDir(Path dir) throws IOException {
-		if (!Files.exists(dir)) {
-			Files.createDirectories(dir);
-		}
-		return dir;
-	}
-
-	protected boolean contains(Path path, String str) throws IOException {
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(path)))) {
-			String line;
-			while ((line = reader.readLine()) != null) {
-				if (line.trim().startsWith(str)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	protected Path getAppCfg() {
-		if (isDev())
-			return Paths.get("target/image/app.cfg.d");
-		else
-			return Paths.get("app.cfg.d");
-	}
-
-	protected boolean isDev() {
-		return Files.exists(Paths.get("pom.xml"));
-	}
-
-	protected void reconfig(boolean check, boolean auto, boolean betas) {
+	@Override
+	public void startUpdate() {
+		/* Ask the launcher (bin/snake) to pull, rebuild and restart us */
 		try {
-			Path path = checkDir(getAppCfg()).resolve("updates");
-			try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(Files.newOutputStream(path)), true)) {
-				if (check) {
-					if (!auto)
-						pw.println("update-on-exit 100");
-				} else {
-					pw.println("update-on-exit 99");
-				}
-				if (betas)
-					pw.println("remote-manifest " + BETA_CHANNEL);
-				else
-					pw.println("remote-manifest " + STABLE_CHANNEL);
+			Path dir = Files.createDirectories(getCacheDir());
+			Files.writeString(dir.resolve("action"), "update");
+		} catch (IOException e) {
+			LOG.log(Level.ERROR, "Could not request update.", e);
+			return;
+		}
+		System.exit(0);
+	}
+
+	/**
+	 * Make sure the app menu entry exists and launches this checkout.
+	 */
+	protected void ensureMenuEntry() {
+		Path repo = getRepo();
+		if (repo == null)
+			return;
+		File f = getShortcutFile();
+		String exec = "Exec=" + repo.resolve("bin").resolve("snake");
+		try {
+			if (!f.exists() || !Files.readString(f.toPath()).contains(exec + "\n"))
+				writeDesktopFile(f, "Snake", "Control and configure your Razer devices", null);
+		} catch (IOException e) {
+			LOG.log(Level.WARNING, "Could not write the app menu entry.", e);
+		}
+	}
+
+	protected void checkForUpdates() {
+		if (git("fetch", "-q", "origin", BRANCH) == null) {
+			LOG.log(Level.INFO, "Could not check for updates (offline?).");
+			return;
+		}
+		String count = git("rev-list", "--count", "HEAD..origin/" + BRANCH);
+		try {
+			behind = count == null ? 0 : Integer.parseInt(count.trim());
+		} catch (NumberFormatException nfe) {
+			behind = 0;
+		}
+		if (behind > 0) {
+			availableVersion = describe("origin/" + BRANCH);
+			LOG.log(Level.INFO, String.format("Update available: %s (%d new commits)", availableVersion, behind));
+		}
+	}
+
+	protected String describe(String ref) {
+		String v = git("log", "-1", "--format=%h (%cs)", ref);
+		return v == null ? "Unknown" : v.trim();
+	}
+
+	/**
+	 * Run git in the checkout, returning stdout or null on failure.
+	 */
+	protected String git(String... args) {
+		Path repo = getRepo();
+		if (repo == null)
+			return null;
+		List<String> cmd = new ArrayList<>();
+		cmd.add("git");
+		cmd.add("-C");
+		cmd.add(repo.toString());
+		for (String a : args)
+			cmd.add(a);
+		try {
+			Process p = new ProcessBuilder(cmd).redirectErrorStream(false).start();
+			p.getOutputStream().close();
+			String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+			if (!p.waitFor(60, TimeUnit.SECONDS)) {
+				p.destroyForcibly();
+				return null;
 			}
-		} catch (IOException ioe) {
-			throw new IllegalStateException("Failed to change update state.", ioe);
+			return p.exitValue() == 0 ? out : null;
+		} catch (IOException e) {
+			return null;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return null;
+		}
+	}
+
+	/**
+	 * The git checkout Snake is running from (it is started from
+	 * snake-app-linux inside it), or null.
+	 */
+	protected Path getRepo() {
+		String prop = System.getProperty("snake.repo");
+		Path p = prop == null ? Paths.get(System.getProperty("user.dir")).toAbsolutePath() : Paths.get(prop);
+		while (p != null) {
+			if (Files.exists(p.resolve(".git")) && Files.exists(p.resolve("bin").resolve("snake")))
+				return p;
+			p = p.getParent();
+		}
+		return null;
+	}
+
+	protected Path getCacheDir() {
+		String xdg = System.getenv("XDG_CACHE_HOME");
+		Path base = xdg == null || xdg.isEmpty() ? Paths.get(System.getProperty("user.home"), ".cache") : Paths.get(xdg);
+		return base.resolve("snake");
+	}
+
+	protected Path getSettingsFile() {
+		String xdg = System.getenv("XDG_CONFIG_HOME");
+		Path base = xdg == null || xdg.isEmpty() ? Paths.get(System.getProperty("user.home"), ".config")
+				: Paths.get(xdg);
+		return base.resolve("snake").resolve("updates");
+	}
+
+	protected Properties settings() {
+		Properties p = new Properties();
+		Path f = getSettingsFile();
+		if (Files.exists(f)) {
+			try (InputStream in = Files.newInputStream(f)) {
+				p.load(in);
+			} catch (IOException e) {
+			}
+		}
+		return p;
+	}
+
+	protected void saveSetting(String key, String value) {
+		Properties p = settings();
+		p.setProperty(key, value);
+		Path f = getSettingsFile();
+		try {
+			Files.createDirectories(f.getParent());
+			/* Plain key=value lines so the shell launcher can read them */
+			try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(f))) {
+				for (String k : p.stringPropertyNames())
+					pw.println(k + "=" + p.getProperty(k));
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to save update setting.", e);
 		}
 	}
 
@@ -200,6 +311,9 @@ public class LinuxPlatformService implements PlatformService {
 
 	private void writeDesktopFile(File file, String name, String comment, Boolean autoStart, String... execArgs)
 			throws IOException, FileNotFoundException {
+		Path repo = getRepo();
+		if (repo == null)
+			throw new IOException("Cannot find the Snake checkout to launch from.");
 		checkFilesParent(file);
 		try (PrintWriter pw = new PrintWriter(new FileWriter(file))) {
 			pw.println("#!/usr/bin/env xdg-open");
@@ -213,14 +327,14 @@ public class LinuxPlatformService implements PlatformService {
 				}
 			}
 			pw.println("Icon=" + iconFile.getAbsolutePath());
-			pw.println("Exec=" + System.getProperty("user.dir") + File.separator + "bin/snake"
+			pw.println("Exec=" + repo.resolve("bin").resolve("snake")
 					+ (execArgs.length == 0 ? "" : " " + String.join(" ", execArgs)));
 			pw.println("Name=" + name);
 			pw.println("Comment=" + comment);
-			pw.println("Categories=Utility;Core;");
+			pw.println("Categories=Utility;");
 			pw.println("StartupNotify=false");
 			pw.println("Type=Application");
-			pw.println("Keywords=razer;snake;mamba;chroma;deathadder");
+			pw.println("Keywords=razer;snake;mouse;chroma;naga");
 			if (autoStart != null) {
 				pw.println("X-GNOME-Autostart-enabled=" + autoStart);
 			}

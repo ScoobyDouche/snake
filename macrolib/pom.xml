@@ -12,7 +12,7 @@
 	<artifactId>macrolib</artifactId>
 	<version>1.0-SNAPSHOT</version>
 
-	<url>https://github.com/bithatch/macrolib</url>
+	<url>https://github.com/ScoobyDouche/snake/tree/main/macrolib</url>
 
 	<!-- Output to jar format -->
 	<packaging>jar</packaging>
@@ -31,9 +31,9 @@
 		</license>
 	</licenses>
 	<scm>
-		<url>https://github.com/bithatch/macrolib/</url>
-		<connection>scm:git:https://github.com/bithatch/macrolib.git</connection>
-		<developerConnection>scm:git:https://github.com/bithatch/macrolib.git</developerConnection>
+		<url>https://github.com/ScoobyDouche/snake/</url>
+		<connection>scm:git:https://github.com/ScoobyDouche/snake.git</connection>
+		<developerConnection>scm:git:https://github.com/ScoobyDouche/snake.git</developerConnection>
 	</scm>
 	<developers>
 		<developer>
