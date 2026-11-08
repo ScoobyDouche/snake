@@ -52,7 +52,8 @@ update() {
 }
 
 # One copy only. The lock is held until Snake (which inherits it) exits.
-exec 9>"${XDG_RUNTIME_DIR:-/tmp}/snake.lock"
+# Lives in a per-user folder (never shared /tmp) and is opened without truncating.
+exec 9>>"${XDG_RUNTIME_DIR:-$CACHE}/snake.lock"
 flock -n 9 || exit 0
 
 if [ ! -d "$REPO/snake-app-linux/target/classes" ]; then
