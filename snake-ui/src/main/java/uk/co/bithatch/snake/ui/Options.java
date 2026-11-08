@@ -264,11 +264,6 @@ public class Options extends AbstractDeviceController implements Listener, Prefe
 	}
 
 	@FXML
-	void evtOpenAddOns() {
-		context.push(AddOns.class, Direction.FROM_BOTTOM);
-	}
-
-	@FXML
 	void evtBack() {
 		if (context.getWindow() != null) {
 			context.getWindow().getOptions().visibleProperty().set(true);

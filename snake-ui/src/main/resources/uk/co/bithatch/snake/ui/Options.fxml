@@ -152,16 +152,6 @@
                         </VBox>
                      </children>
                   </HBox>
-                  <VBox styleClass="tools">
-                     <children>
-                        <Label styleClass="title" text="%addOns" />
-                        <Label text="%addOnsText" wrapText="true" />
-                        <Hyperlink onAction="#evtOpenAddOns" text="%openAddOns">
-                           <graphic>
-                              <FontIcon iconColor="LIME" iconLiteral="fa-puzzle-piece" iconSize="16" />
-                           </graphic></Hyperlink>
-                     </children>
-                  </VBox>
       			</children>
       		</FlowPane>
          </content>

@@ -130,7 +130,7 @@ public class Export extends AbstractController implements Modal {
 		addOnName.setText(addOn.getName());
 		addOnName.textProperty().addListener((e) -> validateInput());
 
-		addOnType.setText(AddOns.bundle.getString("addOnType." + addOn.getClass().getSimpleName()));
+		addOnType.setText(java.util.ResourceBundle.getBundle("uk.co.bithatch.snake.ui.AddOns").getString("addOnType." + addOn.getClass().getSimpleName()));
 		addOnId.setText(addOn.getId());
 
 		addOnDescription.setText(addOn.getDescription());
