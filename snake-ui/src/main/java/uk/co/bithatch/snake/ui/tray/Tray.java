@@ -78,6 +78,7 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 	private App context;
 //	private Font font;
 	private SystemTray systemTray;
+	private XAppTray xappTray;
 	private List<Entry> menuEntries = new ArrayList<>();
 
 	private Timer timer;
@@ -108,6 +109,10 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 	public void close() throws Exception {
 		context.getMacroManager().getMacroSystem().removeRecordingListener(this);
 		cfg.getNode().removePreferenceChangeListener(this);
+		if (xappTray != null) {
+			xappTray.close();
+			xappTray = null;
+		}
 		if (systemTray != null) {
 			systemTray.shutdown();
 			systemTray = null;
@@ -347,6 +352,8 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 			}
 		} else if (systemTray != null && icon == TrayIcon.OFF) {
 			systemTray.setEnabled(false);
+			if (xappTray != null)
+				xappTray.sync(false);
 		} else if (systemTray != null) {
 			systemTray.setEnabled(true);
 			setImage();
@@ -359,6 +366,15 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 	private void setupNewTray() {
 		{
 			setImage();
+
+			if (XAppTray.isSupported() && systemTray.getType() == SystemTray.TrayType.AppIndicator) {
+				try {
+					xappTray = new XAppTray(systemTray, bundle.getString("title"),
+							() -> Platform.runLater(() -> context.open()));
+				} catch (Throwable t) {
+					LOG.log(Level.WARNING, "XApp tray icon unavailable, using AppIndicator.", t);
+				}
+			}
 
 			systemTray.setStatus(bundle.getString("title"));
 			systemTray.setTooltip(bundle.getString("title"));
@@ -558,6 +574,8 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 				break;
 			}
 		}
+		if (xappTray != null)
+			xappTray.sync(true);
 	}
 
 	@Override
