@@ -143,7 +143,6 @@
                                           <CheckBox fx:id="checkForUpdates" mnemonicParsing="false" text="%checkForUpdates" />
                                           <CheckBox fx:id="updateAutomatically" mnemonicParsing="false" styleClass="gapLeft" text="%updateAutomatically" />
                                           <CheckBox fx:id="betas" mnemonicParsing="false" styleClass="gapLeft" text="%betas" />
-                                          <CheckBox fx:id="telemetry" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="%telemetry" />
                                        </children>
                                     </VBox>
                                  </center>

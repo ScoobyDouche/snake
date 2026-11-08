@@ -98,7 +98,8 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 			dev.addListener(this);
 		}
 		SwingUtilities.invokeLater(() -> {
-			Updates.INSTANCE.setENABLE(cfg.isTelemetry());
+			/* Never send dorkbox usage statistics / update pings */
+			Updates.INSTANCE.setENABLE(false);
 			adjustTray(); 
 		});
 	}
@@ -308,11 +309,46 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 	void adjustTray() {
 		var icon = cfg.getTrayIcon();
 		if (systemTray == null && icon != TrayIcon.OFF) {
-			systemTray = SystemTray.get();
-			if (systemTray == null) {
-				throw new RuntimeException("Unable to load SystemTray!");
+			/*
+			 * dorkbox SystemTray refuses to start on the Swing EDT when JavaFX is loaded
+			 * (it just returns null), so create it on its own thread and finish on the EDT.
+			 */
+			if (!creatingTray) {
+				creatingTray = true;
+				Thread t = new Thread(() -> {
+					SystemTray st = null;
+					try {
+						st = SystemTray.get();
+					} catch (Throwable e) {
+						LOG.log(Level.WARNING, "Failed to create tray icon.", e);
+					}
+					final SystemTray fst = st;
+					SwingUtilities.invokeLater(() -> {
+						creatingTray = false;
+						if (fst == null) {
+							LOG.log(Level.WARNING, "No system tray available.");
+						} else {
+							systemTray = fst;
+							setupNewTray();
+						}
+					});
+				}, "SystemTrayInit");
+				t.setDaemon(true);
+				t.start();
 			}
+		} else if (systemTray != null && icon == TrayIcon.OFF) {
+			systemTray.setEnabled(false);
+		} else if (systemTray != null) {
+			systemTray.setEnabled(true);
+			setImage();
+			rebuildMenu();
+		}
+	}
 
+	private boolean creatingTray;
+
+	private void setupNewTray() {
+		{
 			setImage();
 
 			systemTray.setStatus(bundle.getString("title"));
@@ -321,13 +357,6 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 				systemTray.setMenu(new JMenu(bundle.getString("title")));
 			}
 
-			rebuildMenu();
-
-		} else if (systemTray != null && icon == TrayIcon.OFF) {
-			systemTray.setEnabled(false);
-		} else if (systemTray != null) {
-			systemTray.setEnabled(true);
-			setImage();
 			rebuildMenu();
 		}
 	}
@@ -576,9 +605,6 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 				|| evt.getKey().equals(Configuration.PREF_SHOW_BATTERY)
 				|| evt.getKey().equals(Configuration.PREF_WHEN_LOW)) {
 			SwingUtilities.invokeLater(() -> adjustTray());
-		}
-		else if (evt.getKey().equals(Configuration.PREF_THEME)) {
-			SwingUtilities.invokeLater(() -> Updates.INSTANCE.setENABLE(cfg.isTelemetry()));
 		}
 	}
 

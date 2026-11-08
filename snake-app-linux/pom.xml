@@ -92,6 +92,12 @@
 						<!-- JavaFX's GPU qualifier rejects newer GPUs/Mesa and falls back to slow software rendering -->
 						<option>-Dprism.forceGPU=true</option>
 						<option>-Djfreedesktop.quiet=true</option>
+						<!-- dorkbox SystemTray (tray icon) needs these on Java 17+ -->
+						<option>--add-opens=java.base/java.lang=ALL-UNNAMED</option>
+						<option>--add-opens=java.desktop/sun.awt=ALL-UNNAMED</option>
+						<option>--add-exports=javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED</option>
+						<option>--add-opens=javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED</option>
+						<option>--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED</option>
 					</options>
 				</configuration>
 			</plugin>

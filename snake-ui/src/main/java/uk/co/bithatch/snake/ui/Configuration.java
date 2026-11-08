@@ -27,7 +27,6 @@ public class Configuration implements PreferenceChangeListener {
 	public static final String PREF_TRAY_ICON = "trayIcon";
 	public static final String PREF_WHEN_LOW = "whenLow";
 	public static final String PREF_SHOW_BATTERY = "showBattery";
-	public static final String PREF_TELEMETRY = "telemetry";
 
 	public enum TrayIcon {
 		OFF, AUTO, DARK, LIGHT, COLOR
@@ -46,13 +45,11 @@ public class Configuration implements PreferenceChangeListener {
 	private boolean showBattery;
 	private boolean whenLow;
 	private TrayIcon trayIcon;
-	private boolean telemetry;
 
 	Configuration(Preferences node, App context) {
 		this.node = node;
 
 		showBattery = node.getBoolean(PREF_SHOW_BATTERY, true);
-		telemetry = node.getBoolean(PREF_TELEMETRY, true);
 		whenLow = node.getBoolean(PREF_WHEN_LOW, true);
 		trayIcon = TrayIcon.valueOf(node.get(PREF_TRAY_ICON, TrayIcon.AUTO.name()));
 		decorated = node.getBoolean(PREF_DECORATED, false);
@@ -209,14 +206,6 @@ public class Configuration implements PreferenceChangeListener {
 		node.putBoolean(PREF_SHOW_BATTERY, showBattery);
 	}
 
-	public boolean isTelemetry() {
-		return telemetry;
-	}
-
-	public void setTelemetry(boolean telemetry) {
-		this.telemetry = telemetry;
-		node.putBoolean(PREF_TELEMETRY, telemetry);
-	}
 
 	public boolean isWhenLow() {
 		return whenLow;
