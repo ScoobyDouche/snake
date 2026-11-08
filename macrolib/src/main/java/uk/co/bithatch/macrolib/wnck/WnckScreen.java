@@ -81,5 +81,10 @@ public class WnckScreen extends Structure {
 	 */
 	public WnckScreen(Pointer peer) {
 		super(peer);
+		/*
+		 * This is a handle to a live GObject owned by libwnck. Never copy the Java
+		 * fields back over it (that zeroed the object header and corrupted memory).
+		 */
+		setAutoSynch(false);
 	};
 }

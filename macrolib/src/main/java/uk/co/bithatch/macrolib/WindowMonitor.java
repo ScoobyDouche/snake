@@ -20,7 +20,6 @@ package uk.co.bithatch.macrolib;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -29,13 +28,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
 
+import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
+import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 
 import uk.co.bithatch.macrolib.bamf.Matcher;
 import uk.co.bithatch.macrolib.wnck.GDK;
 import uk.co.bithatch.macrolib.wnck.Wnck3Library;
-import uk.co.bithatch.macrolib.wnck.Wnck3Library.GList;
 import uk.co.bithatch.macrolib.wnck.WnckApplication;
 import uk.co.bithatch.macrolib.wnck.WnckScreen;
 import uk.co.bithatch.macrolib.wnck.WnckWindow;
@@ -389,10 +389,14 @@ public class WindowMonitor implements Closeable {
 		if (matcher == null) {
 			if (screen == null)
 				return new ArrayList<>();
-			PointerByReference windows = wnck3.wnck_screen_get_windows(screen);
-			WnckWindow wnckWindow = new WnckWindow(windows.getPointer());
-			WnckApplication wnckApp = wnck3.wnck_window_get_application(wnckWindow);
-			return Arrays.asList(getWNCKApplication(wnckApp));
+			List<Application> l = new ArrayList<>();
+			java.util.Set<Long> seen = new java.util.HashSet<>();
+			for (Pointer w : wnckWindowPointers()) {
+				WnckApplication wnckApp = wnck3.wnck_window_get_application(new WnckWindow(w));
+				if (wnckApp != null && seen.add(wnck3.wnck_application_get_xid(wnckApp).longValue()))
+					l.add(getWNCKApplication(wnckApp));
+			}
+			return l;
 		} else {
 			List<Application> l = new ArrayList<>();
 			for (String s : matcher.ApplicationPaths()) {
@@ -400,6 +404,27 @@ public class WindowMonitor implements Closeable {
 			}
 			return l;
 		}
+	}
+
+	/**
+	 * The WnckWindow pointers in the screen's window list.
+	 * <p>
+	 * wnck_screen_get_windows() returns a GList* owned by wnck: it must not be
+	 * freed. JNA hands the returned address back as the reference's own pointer;
+	 * each node is { gpointer data; GList *next; GList *prev; }.
+	 */
+	private List<Pointer> wnckWindowPointers() {
+		List<Pointer> l = new ArrayList<>();
+		wnck3.wnck_screen_force_update(screen);
+		PointerByReference windows = wnck3.wnck_screen_get_windows(screen);
+		Pointer node = windows == null ? null : windows.getPointer();
+		for (int guard = 0; node != null && guard < 10000; guard++) {
+			Pointer data = node.getPointer(0);
+			if (data != null)
+				l.add(data);
+			node = node.getPointer(Native.POINTER_SIZE);
+		}
+		return l;
 	}
 
 	/**
@@ -412,24 +437,8 @@ public class WindowMonitor implements Closeable {
 		if (matcher == null && screen == null) {
 			return wl;
 		} else if (matcher == null) {
-			wnck3.wnck_screen_force_update(screen);
-			PointerByReference windows = wnck3.wnck_screen_get_windows(screen);
-			try {
-//				 Hrm... how the hell...
-				GList l = new GList(windows.getValue());
-				l.read();
-				while(l.data != null) {
-					WnckWindow wnckWindow = new WnckWindow(l.data);
-					wl.add(getWNCKWindow(wnckWindow));
-					l = new GList(l.next);
-					l.read();
-				}
-				
-//				for(l; l.next != null ; l = new GList(l.next)) {
-//				}
-			} finally {
-				GDK.INSTANCE.g_list_free(windows);
-			}
+			for (Pointer w : wnckWindowPointers())
+				wl.add(getWNCKWindow(new WnckWindow(w)));
 		} else {
 			for (String s : matcher.WindowPaths()) {
 				wl.add(getBAMFWindow(s));

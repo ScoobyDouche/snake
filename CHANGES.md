@@ -14,6 +14,8 @@
  * The DPI slider follows changes made with the mouse's own DPI buttons.
  * Clicking the shortcut while Snake is in the tray shows its window again.
  * Two-colour Breath no longer swaps its colours every time it loads.
+ * Fixed a crash when opening Macros on desktops without bamf (Cinnamon etc.): the libwnck
+   window list was read wrongly and Snake overwrote libwnck's window objects.
 
 ### New
  * Spectrum and Breath effects for devices whose driver only does static colour (Naga Trinity).
