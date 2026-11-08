@@ -47,4 +47,11 @@ public interface PlatformService {
 	default void startUpdate() {
 		System.exit(100);
 	}
+
+	/**
+	 * Run the callback when Snake is launched again while already running (e.g. the
+	 * menu shortcut is clicked while it sits in the tray).
+	 */
+	default void addLaunchListener(Runnable listener) {
+	}
 }

@@ -263,7 +263,7 @@ public class App extends Application implements BackendListener {
 	public void open() {
 		if (!Platform.isFxApplicationThread())
 			Platform.runLater(() -> open());
-		else {
+		else if (primaryStage != null) {
 			primaryStage.show();
 			primaryStage.toFront();
 		}
@@ -400,6 +400,10 @@ public class App extends Application implements BackendListener {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
+
+		/* Clicking the shortcut again while running (e.g. in the tray) shows the window */
+		if (PlatformService.isPlatformSupported())
+			PlatformService.get().addLaunchListener(() -> open());
 
 		schedulerManager = new SchedulerManager();
 		cache = new Cache(this);

@@ -181,6 +181,39 @@ public class LinuxPlatformService implements PlatformService {
 		}
 	}
 
+	@Override
+	public void addLaunchListener(Runnable listener) {
+		/* bin/snake creates ~/.cache/snake/open when Snake is already running */
+		Thread t = new Thread(() -> {
+			try {
+				Path dir = Files.createDirectories(getCacheDir());
+				Path open = dir.resolve("open");
+				Files.deleteIfExists(open);
+				try (java.nio.file.WatchService ws = dir.getFileSystem().newWatchService()) {
+					dir.register(ws, java.nio.file.StandardWatchEventKinds.ENTRY_CREATE,
+							java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY);
+					while (true) {
+						java.nio.file.WatchKey key = ws.take();
+						boolean requested = false;
+						for (java.nio.file.WatchEvent<?> ev : key.pollEvents()) {
+							if (open.getFileName().equals(ev.context()))
+								requested = true;
+						}
+						key.reset();
+						if (requested && Files.deleteIfExists(open))
+							listener.run();
+					}
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} catch (Exception e) {
+				LOG.log(Level.WARNING, "Cannot watch for launch requests.", e);
+			}
+		}, "LaunchListener");
+		t.setDaemon(true);
+		t.start();
+	}
+
 	protected void checkForUpdates() {
 		if (git("fetch", "-q", "origin", BRANCH) == null) {
 			LOG.log(Level.INFO, "Could not check for updates (offline?).");
