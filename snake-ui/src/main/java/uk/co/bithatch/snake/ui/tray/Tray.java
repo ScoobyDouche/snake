@@ -318,7 +318,16 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 				Thread t = new Thread(() -> {
 					SystemTray st = null;
 					try {
-						st = SystemTray.get();
+						SystemTray.DEBUG = Boolean.getBoolean("snake.trayDebug");
+						/*
+						 * Auto-detect picks the GtkStatusIcon (XEmbed) tray on Cinnamon, which the
+						 * panel never shows. Every modern Linux panel shows AppIndicators, so use that.
+						 */
+						String forced = System.getProperty("snake.trayType",
+								System.getProperty("os.name").toLowerCase().contains("linux") ? "AppIndicator" : "");
+						if (!forced.isEmpty())
+							SystemTray.FORCE_TRAY_TYPE = SystemTray.TrayType.valueOf(forced);
+						st = SystemTray.get("Snake");
 					} catch (Throwable e) {
 						LOG.log(Level.WARNING, "Failed to create tray icon.", e);
 					}
@@ -352,6 +361,7 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 			setImage();
 
 			systemTray.setStatus(bundle.getString("title"));
+			systemTray.setTooltip(bundle.getString("title"));
 			Menu menu = systemTray.getMenu();
 			if (menu == null) {
 				systemTray.setMenu(new JMenu(bundle.getString("title")));
