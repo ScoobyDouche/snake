@@ -149,7 +149,6 @@ public class AudioManager implements Closeable, PreferenceChangeListener, AudioD
 	public void setVolume(Device device, int volume) {
 		for (AudioSink sink : getSinks()) {
 			if (sink.getName().startsWith(device.getName())) {
-				System.out.println();
 				backend.setVolume(sink, volume);
 				return;
 			}
@@ -161,7 +160,15 @@ public class AudioManager implements Closeable, PreferenceChangeListener, AudioD
 	}
 
 	public List<AudioSink> getSinks() {
-		return backend == null ? Collections.emptyList() : backend.getSinks();
+		if (backend == null)
+			return Collections.emptyList();
+		try {
+			return backend.getSinks();
+		} catch (RuntimeException e) {
+			/* Audio is optional, never let it break the device UI */
+			LOG.log(Level.WARNING, "Could not list audio sinks.", e);
+			return Collections.emptyList();
+		}
 	}
 
 	public Throwable getError() {

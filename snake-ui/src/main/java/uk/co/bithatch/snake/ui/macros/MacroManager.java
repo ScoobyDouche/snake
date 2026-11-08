@@ -73,7 +73,8 @@ public class MacroManager implements AutoCloseable, ActiveBankListener, ActivePr
 	private MacroSystem macroSystem;
 	private App context;
 	private Map<MacroDevice, Device> macroDevices = new HashMap<>();
-	private Map<Device, MacroDevice> reverseMacroDevices = new HashMap<>();
+	/* One Razer device can have several input devices (Naga Trinity side plate = if01 + if02) */
+	private Map<Device, List<MacroDevice>> reverseMacroDevices = new HashMap<>();
 	private Map<String, List<Pattern>> includeDevicePatterns = new HashMap<>();
 	private Map<String, List<Pattern>> excludeDevicePatterns = new HashMap<>();
 
@@ -207,7 +208,7 @@ public class MacroManager implements AutoCloseable, ActiveBankListener, ActivePr
 					};
 					macroSystem.addDevice(macroDevice);
 					macroDevices.put(macroDevice, device);
-					reverseMacroDevices.put(device, macroDevice);
+					reverseMacroDevices.computeIfAbsent(device, k -> new ArrayList<>()).add(macroDevice);
 					setLEDsForDevice(macroDevice);
 				} catch (Exception e) {
 					if (LOG.isLoggable(Level.DEBUG))
@@ -229,7 +230,17 @@ public class MacroManager implements AutoCloseable, ActiveBankListener, ActivePr
 	protected void addPatternsForDevice(Map<String, List<Pattern>> map, String key, DeviceLayout deviceLayout,
 			Device device, boolean warnEmpty) {
 		List<String> patterns = deviceLayout.getClientProperty(key, Collections.emptyList());
-		if (patterns.isEmpty()) {
+		if (patterns.isEmpty() && warnEmpty) {
+			/*
+			 * Layouts made in the designer (or older layouts) have no input device
+			 * patterns. Fall back to the keyboard interfaces udev names after the device,
+			 * e.g. usb-Razer_Razer_Naga_Trinity_<serial>-if01-event-kbd (the side plate).
+			 */
+			String fallback = ".*" + Pattern.quote(device.getName().replace(' ', '_')) + ".*-event-kbd";
+			LOG.log(Level.INFO, String.format("Layout for %s has no '%s', using default pattern %s",
+					device.getName(), key, fallback));
+			addDevicePattern(map, Pattern.compile(fallback), device.getName());
+		} else if (patterns.isEmpty()) {
 			if (warnEmpty && !deviceLayout.getViewsThatHave(ComponentType.KEY).isEmpty())
 				LOG.log(Level.WARNING, String.format(
 						"Device %s has a layout, but the layout does not contain a client property of '%s'. This means input devices cannot be determined. Please report this to the Snake project.",
@@ -280,7 +291,8 @@ public class MacroManager implements AutoCloseable, ActiveBankListener, ActivePr
 	 * @return macro system device
 	 */
 	public MacroDevice getMacroDevice(Device device) {
-		return reverseMacroDevices.get(device);
+		List<MacroDevice> l = reverseMacroDevices.get(device);
+		return l == null || l.isEmpty() ? null : l.get(0);
 	}
 
 	/**
@@ -377,9 +389,11 @@ public class MacroManager implements AutoCloseable, ActiveBankListener, ActivePr
 			return null;
 		List<Pattern> excludePatterns = excludeDevicePatterns.get(name);
 		List<Path> paths = new ArrayList<>();
-		for (Path p : Files.newDirectoryStream(Paths.get("/dev/input/by-id"), (f) -> matches(includePatterns, f)
-				&& (excludePatterns == null || excludePatterns.isEmpty() || !matches(excludePatterns, f))))
-			paths.add(p);
+		try (var stream = Files.newDirectoryStream(Paths.get("/dev/input/by-id"), (f) -> matches(includePatterns, f)
+				&& (excludePatterns == null || excludePatterns.isEmpty() || !matches(excludePatterns, f)))) {
+			for (Path p : stream)
+				paths.add(p);
+		}
 		return paths;
 	}
 
@@ -419,16 +433,17 @@ public class MacroManager implements AutoCloseable, ActiveBankListener, ActivePr
 
 	@Override
 	public void deviceRemoved(Device device) {
-		MacroDevice macroDevice = reverseMacroDevices.get(device);
-		if (macroDevice != null) {
-			LOG.log(Level.INFO, String.format("Removing macro handling for %s", device.getName()));
-			try {
-				macroSystem.removeDevice(macroDevice);
-			} catch (IOException e) {
-				LOG.log(Level.ERROR, String.format("Failed to remove macro handling for %s", device.getName()), e);
+		List<MacroDevice> list = reverseMacroDevices.remove(device);
+		if (list != null) {
+			for (MacroDevice macroDevice : list) {
+				LOG.log(Level.INFO, String.format("Removing macro handling for %s", device.getName()));
+				try {
+					macroSystem.removeDevice(macroDevice);
+				} catch (Exception e) {
+					LOG.log(Level.ERROR, String.format("Failed to remove macro handling for %s", device.getName()), e);
+				}
+				macroDevices.remove(macroDevice);
 			}
-			reverseMacroDevices.remove(device);
-			macroDevices.remove(macroDevice);
 		}
 		includeDevicePatterns.remove(device.getName());
 		excludeDevicePatterns.remove(device.getName());

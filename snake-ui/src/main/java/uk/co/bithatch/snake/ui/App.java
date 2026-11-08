@@ -20,7 +20,6 @@ import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import com.goxr3plus.fxborderlessscene.borderless.BorderlessScene;
-import com.sshtools.forker.wrapped.Wrapped;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -217,8 +216,6 @@ public class App extends Application implements BackendListener {
 				audioManager.close();
 			} catch (Exception e) {
 			}
-			if(Wrapped.isWrapped())
-				Wrapped.get().close();
 			Platform.exit();
 		} else {
 			if (LOG.isLoggable(Level.DEBUG))
@@ -404,13 +401,6 @@ public class App extends Application implements BackendListener {
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 
-		if (Wrapped.isWrapped()) {
-			Wrapped.get().addLaunchListener((args) -> {
-				open();
-				return 0;
-			});
-		}
-
 		schedulerManager = new SchedulerManager();
 		cache = new Cache(this);
 		legacyMacroStorage = new LegacyMacroStorage(this);
@@ -473,8 +463,6 @@ public class App extends Application implements BackendListener {
 			PREFS.putBoolean("installed", true);
 		}
 
-		if(Wrapped.isWrapped())
-			Wrapped.get().ready(); 
 	}
 
 	private void clearControllers() {

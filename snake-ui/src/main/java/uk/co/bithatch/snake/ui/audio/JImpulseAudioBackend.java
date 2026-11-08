@@ -92,7 +92,7 @@ public class JImpulseAudioBackend implements AudioBackend {
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
-			throw new IllegalStateException("Failed to get sources.");
+			throw new IllegalStateException("Failed to get sinks.", e);
 		}
 	}
 
@@ -101,7 +101,8 @@ public class JImpulseAudioBackend implements AudioBackend {
 
 		/* TODO add this to jimpulse so we can get a list of devices more generally? */
 		/* TODO or make more efficient and not load so much */
-		ProcessBuilder pb = new ProcessBuilder("pacmd", "list-sinks");
+		/* pactl works on both PulseAudio and PipeWire (pacmd is PulseAudio only) */
+		ProcessBuilder pb = new ProcessBuilder("pactl", "list", "sinks");
 		pb.redirectErrorStream(true);
 		try {
 			Process p = pb.start();
@@ -116,14 +117,14 @@ public class JImpulseAudioBackend implements AudioBackend {
 						/* Don't care if active or not */
 						line = line.substring(2);
 					}
-					if (line.startsWith("index: ")) {
+					if (line.startsWith("Sink #")) {
 						if (name != null && index != -1) {
 							l.add(new AudioSink(index, name));
 							name = null;
 						}
-						index = Integer.parseInt(line.substring(7));
+						index = Integer.parseInt(line.substring(6).trim());
 					}
-					if (index != -1 && line.startsWith("name: ")) {
+					if (index != -1 && line.startsWith("Name: ")) {
 						name = line.substring(6);
 					}
 					if (index != -1 && line.startsWith("device.description = \"")) {
@@ -144,13 +145,14 @@ public class JImpulseAudioBackend implements AudioBackend {
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
-			throw new IllegalStateException("Failed to get sources.");
+			throw new IllegalStateException("Failed to get sinks.", e);
 		}
 	}
 
 	@Override
 	public int getVolume(AudioSink sink) {
-		ProcessBuilder pb = new ProcessBuilder("pacmd", "list-sinks");
+		/* pactl works on both PulseAudio and PipeWire (pacmd is PulseAudio only) */
+		ProcessBuilder pb = new ProcessBuilder("pactl", "list", "sinks");
 		pb.redirectErrorStream(true);
 		try {
 			Process p = pb.start();
@@ -227,7 +229,8 @@ public class JImpulseAudioBackend implements AudioBackend {
 
 	@Override
 	public boolean isMuted(AudioSink sink) {
-		ProcessBuilder pb = new ProcessBuilder("pacmd", "list-sinks");
+		/* pactl works on both PulseAudio and PipeWire (pacmd is PulseAudio only) */
+		ProcessBuilder pb = new ProcessBuilder("pactl", "list", "sinks");
 		pb.redirectErrorStream(true);
 		try {
 			Process p = pb.start();
@@ -261,7 +264,7 @@ public class JImpulseAudioBackend implements AudioBackend {
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
-			throw new IllegalStateException("Failed to get sources.");
+			throw new IllegalStateException("Failed to get sinks.", e);
 		}
 		return false;
 	}

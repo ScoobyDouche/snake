@@ -7,6 +7,7 @@
 	<version>1.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<modules>
+		<module>macrolib</module>
 		<module>snake-widgets</module>
 		<module>snake-ui</module>
 		<module>snake-lib</module>
@@ -14,8 +15,6 @@
 		<module>snake-ui-linux</module>
 		<module>snake-themes</module>
 		<module>snake-app-linux</module>
-		<module>snake-updater</module>
-		<module>snake-dist</module>
 	</modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -87,34 +86,6 @@
 		</pluginManagement>
 
 	</build>
-	<repositories>
-		<repository>
-			<id>javassh-opensource-snapshots</id>
-			<name>artifactory.javassh.com-snapshots</name>
-			<url>http://artifactory.javassh.com/opensource-snapshots</url>
-			<snapshots />
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-		</repository>
-		<repository>
-			<id>javassh-opensource-releases</id>
-			<name>artifactory.javassh.com-releases</name>
-			<url>http://artifactory.javassh.com/opensource-releases</url>
-			<releases />
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<repository>
-			<id>oss-snapshots</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-			<snapshots />
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-		</repository>
-	</repositories>
 	<pluginRepositories>
 		<pluginRepository>
 			<id>javassh-opensource-snapshots</id>

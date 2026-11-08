@@ -5,7 +5,7 @@ import java.lang.System.Logger;
 import java.util.Iterator;
 import java.util.ResourceBundle;
 
-import org.controlsfx.control.SearchableComboBox;
+import javafx.scene.control.ComboBox;
 import org.kordamp.ikonli.fontawesome.FontAwesome;
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -42,7 +42,7 @@ public class MacroProfileControl extends ControlController
 	final static ResourceBundle bundle = ResourceBundle.getBundle(MacroProfileControl.class.getName());
 
 	@FXML
-	private SearchableComboBox<MacroProfile> profiles;
+	private ComboBox<MacroProfile> profiles;
 	@FXML
 	private VBox banks;
 	@FXML

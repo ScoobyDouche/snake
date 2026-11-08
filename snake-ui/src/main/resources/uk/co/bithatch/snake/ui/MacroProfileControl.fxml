@@ -6,7 +6,7 @@
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
-<?import org.controlsfx.control.SearchableComboBox?>
+<?import javafx.scene.control.ComboBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="control" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="uk.co.bithatch.snake.ui.MacroProfileControl">
@@ -20,7 +20,7 @@
          <children>
             <HBox styleClass="row">
                <children>
-                  <SearchableComboBox fx:id="profiles" prefWidth="160.0" />
+                  <ComboBox fx:id="profiles" prefWidth="160.0" />
                   <Hyperlink fx:id="addProfile" onAction="#evtAddProfile">
                      <tooltip>
                         <Tooltip text="%addProfile.tooltip" />

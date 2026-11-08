@@ -27,7 +27,6 @@ module uk.co.bithatch.snake.ui {
     opens uk.co.bithatch.snake.ui.designer;
     opens uk.co.bithatch.snake.ui.widgets;
     opens uk.co.bithatch.snake.ui.tray;
-	requires transitive com.sshtools.forker.wrapped;
 	requires transitive org.commonmark;
 	requires transitive com.sshtools.icongenerator.common;
 	requires javafx.base;

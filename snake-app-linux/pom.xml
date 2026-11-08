@@ -15,17 +15,6 @@
 		<developerConnection>scm:git:https://github.com/bithatch/snake.git</developerConnection>
 	</scm>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh-bithatch</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh-bithatch</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
-
 	<licenses>
 		<license>
 			<name>GPLv3</name>
@@ -99,6 +88,11 @@
 				<version>0.0.5</version>
 				<configuration>
 					<mainClass>uk.co.bithatch.snake.app.linux/uk.co.bithatch.snake.app.linux.App</mainClass>
+					<options>
+						<!-- JavaFX's GPU qualifier rejects newer GPUs/Mesa and falls back to slow software rendering -->
+						<option>-Dprism.forceGPU=true</option>
+						<option>-Djfreedesktop.quiet=true</option>
+					</options>
 				</configuration>
 			</plugin>
 			
@@ -151,38 +145,6 @@
 					<source>9</source>
 					<target>9</target>
 					<encoding>UTF-8</encoding>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.6</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-						<configuration>
-							<gpgArguments>
-								<arg>--pinentry-mode</arg>
-								<arg>loopback</arg>
-							</gpgArguments>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>org.sonatype.plugins</groupId>
-				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<version>1.6.8</version>
-				<extensions>true</extensions>
-				<configuration>
-					<serverId>ossrh-bithatch</serverId>
-					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
-					<autoReleaseAfterClose>true</autoReleaseAfterClose>
 				</configuration>
 			</plugin>
 		</plugins>
