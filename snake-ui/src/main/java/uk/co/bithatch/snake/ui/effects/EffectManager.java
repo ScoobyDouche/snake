@@ -490,6 +490,20 @@ public class EffectManager implements BackendListener, Closeable {
 	}
 
 	@SuppressWarnings("unchecked")
+	/**
+	 * The saved effect if it can run on this device, otherwise a supported effect
+	 * with the same name (e.g. the software version of Audio or Breath), or null.
+	 */
+	private EffectHandler<?, ?> usable(Device dev, EffectHandler<?, ?> fx) {
+		if (fx == null || dev.getSupportedEffects().contains(fx.getBackendEffectClass()) || fx.isSupported(dev))
+			return fx;
+		for (EffectHandler<?, ?> alt : getEffects(dev)) {
+			if (alt.getDisplayName().equals(fx.getDisplayName()))
+				return alt;
+		}
+		return null;
+	}
+
 	private <H extends EffectHandler<?, ?>> H findEffect(Lit component, Class<H> clazz) {
 		for (EffectHandler<?, ?> eh : getEffects(component)) {
 			if (eh.getClass().equals(clazz))
@@ -540,7 +554,7 @@ public class EffectManager implements BackendListener, Closeable {
 			/* Acquire an effects controller for this device */
 			EffectAcquisition acq = acquire(dev);
 
-			EffectHandler<?, ?> deviceEffect = acq.getEffect(dev);
+			EffectHandler<?, ?> deviceEffect = usable(dev, acq.getEffect(dev));
 			boolean activated = false;
 			if (deviceEffect != null && !deviceEffect.isRegions()) {
 				/* Always activates at device level */

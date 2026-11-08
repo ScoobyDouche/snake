@@ -156,7 +156,15 @@ public class AudioManager implements Closeable, PreferenceChangeListener, AudioD
 	}
 
 	public List<AudioSource> getSources() {
-		return backend == null ? Collections.emptyList() : backend.getSources();
+		if (backend == null)
+			return Collections.emptyList();
+		try {
+			return backend.getSources();
+		} catch (RuntimeException e) {
+			/* Audio is optional, never let it break a screen */
+			LOG.log(Level.WARNING, "Could not list audio sources.", e);
+			return Collections.emptyList();
+		}
 	}
 
 	public List<AudioSink> getSinks() {

@@ -14,12 +14,18 @@
  * The DPI slider follows changes made with the mouse's own DPI buttons.
  * Clicking the shortcut while Snake is in the tray shows its window again.
  * Two-colour Breath no longer swaps its colours every time it loads.
+ * The Audio effect's settings screen opens on PipeWire, and audio sources are labelled clearly
+   ("Monitor of ..." for what's playing on an output).
+ * Audio is no longer offered (and broken) on devices without a key matrix; a saved effect that
+   can't run on a device falls back to its software version instead of failing at startup.
  * Fixed a crash when opening Macros on desktops without bamf (Cinnamon etc.): the libwnck
    window list was read wrongly and Snake overwrote libwnck's window objects.
 
 ### New
  * Spectrum and Breath effects for devices whose driver only does static colour (Naga Trinity).
    Snake animates them itself, so they run while Snake is running (it stays in the tray).
+ * Audio effect for those devices too: the lights follow the sound (pick "Monitor of ..." as the
+   source to follow what your PC is playing).
 
 ### Changes
  * Updates now come from this fork on GitHub, installed by the `bin/snake` launcher.

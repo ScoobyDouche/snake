@@ -49,7 +49,8 @@ public class JImpulseAudioBackend implements AudioBackend {
 
 		/* TODO add this to jimpulse so we can get a list of devices more generally? */
 		/* TODO or make more efficient and not load so much */
-		ProcessBuilder pb = new ProcessBuilder("pacmd", "list-sources");
+		/* pactl works on both PulseAudio and PipeWire (pacmd is PulseAudio only) */
+		ProcessBuilder pb = new ProcessBuilder("pactl", "list", "sources");
 		pb.redirectErrorStream(true);
 		try {
 			Process p = pb.start();
@@ -64,18 +65,22 @@ public class JImpulseAudioBackend implements AudioBackend {
 						/* Don't care if active or not */
 						line = line.substring(2);
 					}
-					if (line.startsWith("index: ")) {
+					if (line.startsWith("Source #")) {
 						if (name != null && index != -1) {
 							l.add(new AudioSource(index, name));
 							name = null;
 						}
-						index = Integer.parseInt(line.substring(7));
+						index = Integer.parseInt(line.substring(8).trim());
 					}
-					if (index != -1 && line.startsWith("name: ")) {
+					if (index != -1 && line.startsWith("Name: ")) {
 						name = line.substring(6);
 					}
 					if (index != -1 && line.startsWith("device.description = \"")) {
-						name = line.substring(22, line.length() - 1);
+						String desc = line.substring(22, line.length() - 1);
+						/* PipeWire gives a sink's monitor the sink's own description */
+						if (name != null && name.endsWith(".monitor") && !desc.startsWith("Monitor of"))
+							desc = "Monitor of " + desc;
+						name = desc;
 					}
 				}
 			}

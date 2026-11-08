@@ -81,7 +81,7 @@ public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix, 
 		/* Load the configuration for this effect */
 		onLoad(getEffectPreferences(component), effect);
 		
-		int[] dw = Lit.getDevice(component).getMatrixSize();
+		int[] dw = getMatrixSize(component);
 		height = dw[0];
 		width = dw[1];
 
@@ -118,7 +118,22 @@ public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix, 
 
 	@Override
 	public boolean isSupported(Lit component) {
-		return true;
+		/* Draws onto the device's key matrix, so it needs one */
+		return component != null && component.getSupportedEffects().contains(Matrix.class);
+	}
+
+	/**
+	 * Size of the canvas the audio modes draw on, [rows, columns].
+	 */
+	protected int[] getMatrixSize(Lit component) {
+		return Lit.getDevice(component).getMatrixSize();
+	}
+
+	/**
+	 * The current frame, [row][column][r,g,b].
+	 */
+	protected int[][][] getFrame() {
+		return frame;
 	}
 
 	@Override
