@@ -54,5 +54,7 @@ module uk.co.bithatch.snake.ui {
 	uk.co.bithatch.snake.ui.effects.StarlightEffectHandler,
 	uk.co.bithatch.snake.ui.effects.StaticEffectHandler,
 	uk.co.bithatch.snake.ui.effects.WaveEffectHandler,
-	uk.co.bithatch.snake.ui.effects.AudioEffectHandler;
+	uk.co.bithatch.snake.ui.effects.AudioEffectHandler,
+	uk.co.bithatch.snake.ui.effects.SoftwareSpectrumEffectHandler,
+	uk.co.bithatch.snake.ui.effects.SoftwareBreathEffectHandler;
 }

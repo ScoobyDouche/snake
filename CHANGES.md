@@ -11,6 +11,13 @@
  * The profile dropdown no longer redraws itself 60 times a second.
  * The tray icon shows again.
  * Side buttons are found on devices whose layout doesn't list their input devices (Naga Trinity).
+ * The DPI slider follows changes made with the mouse's own DPI buttons.
+ * Clicking the shortcut while Snake is in the tray shows its window again.
+ * Two-colour Breath no longer swaps its colours every time it loads.
+
+### New
+ * Spectrum and Breath effects for devices whose driver only does static colour (Naga Trinity).
+   Snake animates them itself, so they run while Snake is running (it stays in the tray).
 
 ### Changes
  * Updates now come from this fork on GitHub, installed by the `bin/snake` launcher.

@@ -7,7 +7,6 @@ import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Breath;
 import uk.co.bithatch.snake.lib.effects.Breath.Mode;
 import uk.co.bithatch.snake.ui.BreathOptions;
-import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 
 public class BreathEffectHandler extends AbstractBackendEffectHandler<Breath, BreathOptions> {
 
@@ -19,8 +18,8 @@ public class BreathEffectHandler extends AbstractBackendEffectHandler<Breath, Br
 	protected void onLoad(Preferences prefs, Breath effect) {
 		effect.setMode(Mode.valueOf(prefs.get("mode", Mode.RANDOM.name())));
 		effect.setColor(Colors.fromHex(prefs.get("color", "#00ff00")));
-		effect.setColor1(Colors.fromHex(prefs.get("color2", "#00ff00")));
-		effect.setColor2(Colors.fromHex(prefs.get("color1", "#0000ff")));
+		effect.setColor1(Colors.fromHex(prefs.get("color1", "#00ff00")));
+		effect.setColor2(Colors.fromHex(prefs.get("color2", "#0000ff")));
 	}
 
 	@Override
@@ -38,7 +37,7 @@ public class BreathEffectHandler extends AbstractBackendEffectHandler<Breath, Br
 		breath.setColor(controller.getColor());
 		breath.setColor1(controller.getColor1());
 		breath.setColor2(controller.getColor2());
-		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(breath));
+		apply(component, breath);
 		save(component, breath);
 	}
 

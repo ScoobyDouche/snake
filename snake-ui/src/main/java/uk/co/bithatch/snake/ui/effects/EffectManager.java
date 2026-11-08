@@ -88,7 +88,8 @@ public class EffectManager implements BackendListener, Closeable {
 						String.format("Activating effect %s on %s", effect.getDisplayName(), lit.toString()));
 
 			/* Activate the new effect */
-			if (lit.getSupportedEffects().contains(effect.getBackendEffectClass())) {
+			/* Software effects (e.g. SoftwareBreathEffectHandler) run on devices without the backend effect */
+			if (lit.getSupportedEffects().contains(effect.getBackendEffectClass()) || effect.isSupported(lit)) {
 				if (effect.isRegions()) {
 
 					if (lit instanceof Device) {

@@ -23,9 +23,17 @@ public abstract class AbstractBackendEffectHandler<E extends Effect, O extends A
 		/* Load the configuration for this effect */
 		onLoad(getEffectPreferences(component), effect);
 
-		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(effect));
+		apply(component, effect);
 
 		return effect;
+	}
+
+	/**
+	 * Send the effect to the device. Software effects override this to animate it
+	 * instead.
+	 */
+	protected void apply(Lit component, E effect) {
+		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(effect));
 	}
 
 }
