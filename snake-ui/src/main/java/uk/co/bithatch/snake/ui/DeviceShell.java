@@ -51,7 +51,36 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polyline;
 import javafx.stage.FileChooser;
+import uk.co.bithatch.linuxio.EventCode;
+import uk.co.bithatch.macrolib.ActionMacro;
+import uk.co.bithatch.macrolib.CommandMacro;
+import uk.co.bithatch.macrolib.KeySequence;
+import uk.co.bithatch.macrolib.KeyState;
+import uk.co.bithatch.macrolib.Macro;
+import uk.co.bithatch.macrolib.MacroBank;
+import uk.co.bithatch.macrolib.MacroDevice;
+import uk.co.bithatch.macrolib.NoopMacro;
+import uk.co.bithatch.macrolib.RepeatMode;
+import uk.co.bithatch.macrolib.ScriptMacro;
+import uk.co.bithatch.macrolib.SimpleMacro;
+import uk.co.bithatch.macrolib.UInputMacro;
 import uk.co.bithatch.snake.lib.Device;
+import uk.co.bithatch.snake.ui.Configuration.TrayIcon;
+import uk.co.bithatch.snake.lib.effects.Breath;
+import uk.co.bithatch.snake.lib.effects.Effect;
+import uk.co.bithatch.snake.lib.effects.Reactive;
+import uk.co.bithatch.snake.lib.effects.Ripple;
+import uk.co.bithatch.snake.lib.effects.Starlight;
+import uk.co.bithatch.snake.lib.effects.Static;
+import uk.co.bithatch.snake.lib.effects.Wave;
+import uk.co.bithatch.snake.ui.effects.AbstractBackendEffectHandler;
+import uk.co.bithatch.snake.ui.effects.AudioEffectHandler;
+import uk.co.bithatch.snake.ui.effects.AudioEffectMode;
+import uk.co.bithatch.snake.ui.effects.BlobbyAudioEffectMode;
+import uk.co.bithatch.snake.ui.effects.BurstyAudioEffectMode;
+import uk.co.bithatch.snake.ui.effects.ExpandAudioEffectMode;
+import uk.co.bithatch.snake.ui.effects.LineyAudioEffectMode;
+import uk.co.bithatch.snake.ui.effects.PeaksAudioEffectMode;
 import uk.co.bithatch.snake.lib.OnboardProfiles;
 import uk.co.bithatch.snake.lib.OnboardProfiles.Action;
 import uk.co.bithatch.snake.lib.OnboardProfiles.DpiStages;
@@ -173,10 +202,46 @@ public class DeviceShell extends AbstractDeviceController {
 		buildFrame();
 		showPage(page);
 		io.execute(this::openOnboard);
+		if (!watchingBackend) {
+			context.getBackend().addListener(unplugWatch);
+			watchingBackend = true;
+		}
 	}
+
+	private boolean watchingBackend;
+
+	/** When this device goes away, show another one or the "no devices" notice. */
+	private final uk.co.bithatch.snake.lib.Backend.BackendListener unplugWatch = new uk.co.bithatch.snake.lib.Backend.BackendListener() {
+		@Override
+		public void deviceAdded(Device device) {
+		}
+
+		@Override
+		public void deviceRemoved(Device device) {
+			if (!device.equals(getDevice()))
+				return;
+			Platform.runLater(() -> {
+				try {
+					var others = context.getBackend().getDevices().stream().filter(d -> !d.equals(device)).toList();
+					if (!others.isEmpty())
+						context.openDevice(others.get(0));
+					else {
+						context.clearScreens();
+						context.push(Notice.class, Direction.FADE);
+					}
+				} catch (Exception e) {
+					LOG.log(Level.WARNING, "Couldn't leave the unplugged device.", e);
+				}
+			});
+		}
+	};
 
 	@Override
 	protected void onDeviceCleanUp() {
+		if (watchingBackend) {
+			context.getBackend().removeListener(unplugWatch);
+			watchingBackend = false;
+		}
 		if (pollTask != null)
 			pollTask.cancel(false);
 		poll.shutdownNow();
@@ -691,6 +756,7 @@ public class DeviceShell extends AbstractDeviceController {
 		editing = null;
 		editor.setVisible(false);
 		slotButtons.values().forEach(b -> b.getStyleClass().remove("selected"));
+		macroRows.forEach(b -> b.getStyleClass().remove("selected"));
 		drawLines();
 	}
 
@@ -1050,8 +1116,8 @@ public class DeviceShell extends AbstractDeviceController {
 					"Effects that run while Snake is open, like lights that react to sound. They show instead of the saved lighting until you pick \"Saved lighting\"."));
 		var fx = context.getEffectManager();
 		EffectAcquisition acq = fx.getRootAcquisition(dev);
-		var handlers = new ArrayList<EffectHandler<?, ?>>(fx.getEffects(dev));
-		var live = new ComboBox<EffectHandler<?, ?>>();
+		var handlers = new ArrayList<EffectHandler<?>>(fx.getEffects(dev));
+		var live = new ComboBox<EffectHandler<?>>();
 		live.getItems().add(null);
 		live.getItems().addAll(handlers);
 		live.setCellFactory(l -> new EffectCell());
@@ -1061,10 +1127,11 @@ public class DeviceShell extends AbstractDeviceController {
 		liveEffect = live;
 		var options = new Button("Options");
 		options.getStyleClass().add("ghost");
-		options.disableProperty().bind(live.valueProperty().isNull());
-		options.setOnAction(e -> openEffectOptions(live.getValue()));
+		options.disableProperty().bind(javafx.beans.binding.Bindings.createBooleanBinding(
+				() -> !hasSettings(live.getValue()), live.valueProperty()));
+		options.setOnAction(e -> showEffectOptions(live.getValue()));
 		live.setOnAction(e -> {
-			EffectHandler<?, ?> h = live.getValue();
+			EffectHandler<?> h = live.getValue();
 			if (acq == null)
 				return;
 			if (h == null) {
@@ -1082,7 +1149,7 @@ public class DeviceShell extends AbstractDeviceController {
 		return box;
 	}
 
-	private ComboBox<EffectHandler<?, ?>> liveEffect;
+	private ComboBox<EffectHandler<?>> liveEffect;
 
 	/** Stop Snake's live effect and remember that the saved lighting is wanted. */
 	private void stopLiveEffect() {
@@ -1095,9 +1162,9 @@ public class DeviceShell extends AbstractDeviceController {
 			liveEffect.setValue(null);
 	}
 
-	private class EffectCell extends ListCell<EffectHandler<?, ?>> {
+	private class EffectCell extends ListCell<EffectHandler<?>> {
 		@Override
-		protected void updateItem(EffectHandler<?, ?> item, boolean empty) {
+		protected void updateItem(EffectHandler<?> item, boolean empty) {
 			super.updateItem(item, empty);
 			if (empty)
 				setText(null);
@@ -1106,18 +1173,221 @@ public class DeviceShell extends AbstractDeviceController {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private void openEffectOptions(EffectHandler<?, ?> handler) {
-		if (handler == null || !handler.hasOptions())
-			return;
-		var c = (AbstractEffectController<?, EffectHandler<?, ?>>) context.push(handler.getOptionsController(), this,
-				Direction.FROM_RIGHT);
-		try {
-			c.setRegion(getDevice());
-			c.setEffectHandler(handler);
-		} catch (Exception e) {
-			error(e);
+	private static final List<Class<? extends AudioEffectMode>> AUDIO_MODES = List.of(PeaksAudioEffectMode.class,
+			ExpandAudioEffectMode.class, BlobbyAudioEffectMode.class, BurstyAudioEffectMode.class,
+			LineyAudioEffectMode.class);
+
+	public static boolean hasSettings(EffectHandler<?> h) {
+		if (h instanceof AudioEffectHandler)
+			return true;
+		if (h instanceof AbstractBackendEffectHandler<?> b) {
+			var c = b.getBackendEffectClass();
+			return c == Static.class || c == Breath.class || c == Wave.class || c == Reactive.class
+					|| c == Ripple.class || c == Starlight.class;
 		}
+		return false;
+	}
+
+	/** A colour row: swatches plus a picker. Calls {@code onPick} with RGB. */
+	private Node colourRow(int[] rgb, java.util.function.Consumer<int[]> onPick) {
+		var picker = new ColorPicker(rgb == null ? Color.web("#44d62c") : Color.rgb(rgb[0], rgb[1], rgb[2]));
+		picker.getStyleClass().add("button");
+		picker.valueProperty().addListener((o, a, c) -> onPick.accept(new int[] { (int) Math.round(c.getRed() * 255),
+				(int) Math.round(c.getGreen() * 255), (int) Math.round(c.getBlue() * 255) }));
+		var sw = new javafx.scene.layout.FlowPane(6, 6);
+		for (Color c : SWATCHES) {
+			var b = new Button();
+			b.getStyleClass().add("swatch");
+			b.setStyle("-fx-background-color: " + toHex(c) + ";");
+			b.setOnAction(x -> picker.setValue(c));
+			sw.getChildren().add(b);
+		}
+		return new VBox(8, sw, picker);
+	}
+
+	/** Segmented choice; calls {@code onPick} with the chosen index. */
+	private Node segments(String[] labels, int selected, java.util.function.IntConsumer onPick) {
+		var row = new HBox(6);
+		row.getStyleClass().add("segments");
+		var tg = new ToggleGroup();
+		for (int i = 0; i < labels.length; i++) {
+			int idx = i;
+			var t = new ToggleButton(labels[i]);
+			t.getStyleClass().add("segment");
+			t.setToggleGroup(tg);
+			t.setSelected(i == selected);
+			t.setOnAction(e -> {
+				t.setSelected(true);
+				onPick.accept(idx);
+			});
+			row.getChildren().add(t);
+		}
+		return row;
+	}
+
+	/** A slider that calls {@code onSet} when the user lets go. */
+	private Node slider(double min, double max, double value, java.util.function.DoubleConsumer onSet) {
+		var sl = new Slider(min, max, Math.max(min, Math.min(max, value)));
+		sl.valueChangingProperty().addListener((o, a, b) -> {
+			if (!b)
+				onSet.accept(sl.getValue());
+		});
+		sl.setOnMouseReleased(e -> onSet.accept(sl.getValue()));
+		return sl;
+	}
+
+	/** Settings for the live effect, in the right-hand panel. */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void showEffectOptions(EffectHandler<?> handler) {
+		if (handler == null)
+			return;
+		closeEditor();
+		Device dev = getDevice();
+		var title = new Label(handler.getDisplayName());
+		title.getStyleClass().add("sectionTitle");
+		var body = new VBox(10);
+		if (handler instanceof AudioEffectHandler a) {
+			var am = context.getAudioManager();
+			var cfg = context.getConfiguration();
+			int[][] cols = { a.getColor1(), a.getColor2(), a.getColor3() };
+			Class<? extends AudioEffectMode>[] mode = new Class[] { a.getMode() };
+			Runnable apply = () -> a.configure(dev, mode[0], cols[0], cols[1], cols[2]);
+			var modes = combo(AUDIO_MODES, c -> c.getSimpleName().replace("AudioEffectMode", ""));
+			modes.setValue(mode[0]);
+			modes.setOnAction(e -> {
+				mode[0] = modes.getValue();
+				apply.run();
+			});
+			body.getChildren().addAll(fieldLabel("Style"), modes);
+			if (am.getError() != null)
+				body.getChildren().add(hint("Sound isn't available: " + am.getError().getLocalizedMessage()));
+			else {
+				var src = combo(am.getSources(), s -> s.getName());
+				src.setValue(am.getSource(cfg.getAudioSource()));
+				src.setOnAction(e -> {
+					if (src.getValue() != null)
+						cfg.setAudioSource(src.getValue().getName());
+				});
+				body.getChildren().addAll(fieldLabel("Listen to"), src);
+			}
+			body.getChildren().addAll(fieldLabel("Sensitivity"),
+					slider(0, 20, cfg.getAudioGain(), v -> cfg.setAudioGain((float) v)));
+			String[] names = { "Quiet colour", "Middle colour", "Loud colour" };
+			for (int i = 0; i < 3; i++) {
+				int idx = i;
+				body.getChildren().addAll(fieldLabel(names[i]), colourRow(cols[i], c -> {
+					cols[idx] = c;
+					apply.run();
+				}));
+			}
+		} else if (handler instanceof AbstractBackendEffectHandler h && hasSettings(handler)) {
+			Effect e = h.loadEffect(dev);
+			Runnable apply = () -> {
+				try {
+					h.storeEffect(dev, (Effect) e.clone());
+				} catch (CloneNotSupportedException ex) {
+					throw new IllegalStateException(ex);
+				}
+			};
+			if (e instanceof Static st) {
+				body.getChildren().addAll(fieldLabel("Colour"), colourRow(st.getColor(), c -> {
+					st.setColor(c);
+					apply.run();
+				}));
+			} else if (e instanceof Breath br) {
+				var colours = new VBox(10);
+				Runnable fill = () -> {
+					colours.getChildren().clear();
+					if (br.getMode() == Breath.Mode.SINGLE)
+						colours.getChildren().addAll(fieldLabel("Colour"), colourRow(br.getColor(), c -> {
+							br.setColor(c);
+							apply.run();
+						}));
+					else if (br.getMode() == Breath.Mode.DUAL)
+						colours.getChildren().addAll(fieldLabel("First colour"), colourRow(br.getColor1(), c -> {
+							br.setColor1(c);
+							apply.run();
+						}), fieldLabel("Second colour"), colourRow(br.getColor2(), c -> {
+							br.setColor2(c);
+							apply.run();
+						}));
+				};
+				Breath.Mode[] bm = { Breath.Mode.SINGLE, Breath.Mode.DUAL, Breath.Mode.RANDOM };
+				int sel = br.getMode() == null ? 2 : java.util.Arrays.asList(bm).indexOf(br.getMode());
+				body.getChildren().addAll(fieldLabel("Colours"),
+						segments(new String[] { "One", "Two", "Random" }, sel, i -> {
+							br.setMode(bm[i]);
+							fill.run();
+							apply.run();
+						}), colours);
+				fill.run();
+			} else if (e instanceof Wave w) {
+				body.getChildren().addAll(fieldLabel("Direction"), segments(new String[] { "Backward", "Forward" },
+						w.getDirection() == Wave.Direction.FORWARD ? 1 : 0, i -> {
+							w.setDirection(Wave.Direction.values()[i]);
+							apply.run();
+						}));
+			} else if (e instanceof Reactive r) {
+				body.getChildren().addAll(fieldLabel("Speed"), slider(1, 255, r.getSpeed(), v -> {
+					r.setSpeed((int) Math.round(v));
+					apply.run();
+				}), fieldLabel("Colour"), colourRow(r.getColor(), c -> {
+					r.setColor(c);
+					apply.run();
+				}));
+			} else if (e instanceof Ripple rp) {
+				var colour = colourRow(rp.getColor(), c -> {
+					rp.setColor(c);
+					apply.run();
+				});
+				colour.setVisible(rp.getMode() == Ripple.Mode.SINGLE);
+				colour.managedProperty().bind(colour.visibleProperty());
+				body.getChildren().addAll(fieldLabel("Colour"), segments(new String[] { "Random", "One colour" },
+						rp.getMode() == Ripple.Mode.SINGLE ? 1 : 0, i -> {
+							rp.setMode(Ripple.Mode.values()[i]);
+							colour.setVisible(i == 1);
+							apply.run();
+						}), colour, fieldLabel("Speed"), slider(1, 255, rp.getRefreshRate(), v -> {
+							rp.setRefreshRate(v);
+							apply.run();
+						}));
+			} else if (e instanceof Starlight sl) {
+				var colours = new VBox(10);
+				Runnable fill = () -> {
+					colours.getChildren().clear();
+					if (sl.getMode() == Starlight.Mode.SINGLE)
+						colours.getChildren().add(colourRow(sl.getColor(), c -> {
+							sl.setColor(c);
+							apply.run();
+						}));
+					else if (sl.getMode() == Starlight.Mode.DUAL)
+						colours.getChildren().addAll(colourRow(sl.getColor1(), c -> {
+							sl.setColor1(c);
+							apply.run();
+						}), colourRow(sl.getColor2(), c -> {
+							sl.setColor2(c);
+							apply.run();
+						}));
+				};
+				Starlight.Mode[] sm = { Starlight.Mode.SINGLE, Starlight.Mode.DUAL, Starlight.Mode.RANDOM };
+				int sel = sl.getMode() == null ? 2 : java.util.Arrays.asList(sm).indexOf(sl.getMode());
+				body.getChildren().addAll(fieldLabel("Colours"),
+						segments(new String[] { "One", "Two", "Random" }, sel, i -> {
+							sl.setMode(sm[i]);
+							fill.run();
+							apply.run();
+						}), colours, fieldLabel("Speed"), slider(1, 255, sl.getSpeed(), v -> {
+							sl.setSpeed((int) Math.round(v));
+							apply.run();
+						}));
+				fill.run();
+			}
+		} else {
+			body.getChildren().add(hint("This effect has no settings."));
+		}
+		var close = cancelButton("Done");
+		editor.getChildren().setAll(title, body, close);
+		editor.setVisible(true);
 	}
 
 	/** After stopping a live effect, put the profile's own lighting back on the mouse. */
@@ -1168,28 +1438,465 @@ public class DeviceShell extends AbstractDeviceController {
 
 	/* ---- Macros page ---- */
 
+	/* Naga side plate keys, in plate order */
+	private static final List<EventCode> SIDE_KEYS = List.of(EventCode.KEY_1, EventCode.KEY_2, EventCode.KEY_3,
+			EventCode.KEY_4, EventCode.KEY_5, EventCode.KEY_6, EventCode.KEY_7, EventCode.KEY_8, EventCode.KEY_9,
+			EventCode.KEY_0, EventCode.KEY_MINUS, EventCode.KEY_EQUAL);
+	private static final String[] MACRO_KINDS = { "Press a key", "Type text", "Run a command", "Snake action",
+			"Script", "Do nothing" };
+
+	private final List<Button> macroRows = new ArrayList<>();
+
 	private Node macrosPage() {
 		var box = pageBox("Macros",
-				"Record a set of key presses and put it on a button. Macros made here run through Snake, so Snake has to be open for them to work.");
-		boolean ok = context.getMacroManager().isSupported(getDevice())
-				|| getDevice().getCapabilities().contains(uk.co.bithatch.snake.lib.Capability.MACROS);
-		if (ok) {
-			var open = new Button("Open the macro editor");
-			open.getStyleClass().add("primary");
-			open.setOnAction(e -> {
-				try {
-					context.editMacros(this);
-				} catch (Exception ex) {
-					error(ex);
-				}
-			});
-			box.getChildren().add(open);
-		} else
-			box.getChildren().add(hint("This device doesn't support macros."));
+				"Make a button press a different key, type some text or run a command. These run through Snake, so Snake has to be open for them to work.");
+		macroRows.clear();
+		var mm = context.getMacroManager();
+		MacroDevice md = mm.getMacroDevice(getDevice());
+		if (md == null) {
+			box.getChildren().add(hint("This device doesn't support Snake macros."));
+			return box;
+		}
+		MacroBank bank;
+		try {
+			bank = mm.getMacroSystem().getActiveBank(md);
+		} catch (Exception e) {
+			box.getChildren().add(hint("Couldn't load macros: " + e.getMessage()));
+			return box;
+		}
+
+		box.getChildren().add(macroSetRow(mm.getMacroSystem(), md));
+
+		var add = new Button("Add a macro");
+		add.getStyleClass().add("primary");
+		add.setOnAction(e -> {
+			KeySequence seq = SIDE_KEYS.stream().filter(c -> md.getSupportedInputEvents().contains(c))
+					.map(c -> new KeySequence(KeyState.UP, c)).filter(k -> !bank.contains(k)).findFirst().orElse(null);
+			try {
+				if (seq == null)
+					seq = bank.getNextFreeActivationSequence();
+			} catch (IllegalStateException ise) {
+				setStatus("Every button already has a macro.", true);
+				return;
+			}
+			showMacroEditor(bank, md, null, seq);
+		});
+		box.getChildren().add(add);
+
+		var macros = new ArrayList<>(bank.getMacros());
+		macros.sort((a, b) -> Integer.compare(triggerOrder(a.getActivatedBy()), triggerOrder(b.getActivatedBy())));
+		if (macros.isEmpty()) {
+			box.getChildren().add(hint("No macros yet."));
+		} else {
+			var list = new VBox(8);
+			list.setMaxWidth(520);
+			for (Macro m : macros) {
+				var t = new Label(triggerName(m.getActivatedBy()));
+				t.getStyleClass().add("slotName");
+				var a = new Label(describeMacro(m));
+				a.getStyleClass().add("slotAction");
+				var b = new Button();
+				b.setGraphic(new VBox(1, t, a));
+				b.getStyleClass().add("slot");
+				b.setMaxWidth(Double.MAX_VALUE);
+				b.setUserData(m);
+				b.setOnAction(e -> showMacroEditor(bank, md, m, m.getActivatedBy()));
+				macroRows.add(b);
+				list.getChildren().add(b);
+			}
+			box.getChildren().add(list);
+		}
+
 		if (onboard != null)
 			box.getChildren().add(hint(
-					"Macros saved on the mouse (made in Synapse) show on the Buttons page as \"Macro (from Synapse)\". You can keep them or replace them there."));
+					"Macros saved on the mouse (made in Synapse) show on the Buttons page as \"Macro (from Synapse)\"."));
 		return box;
+	}
+
+	/** Pick, add, rename or delete macro sets (macrolib profiles). The picked set is the one in use. */
+	private Node macroSetRow(uk.co.bithatch.macrolib.MacroSystem sys, MacroDevice md) {
+		var profiles = new ArrayList<uk.co.bithatch.macrolib.MacroProfile>();
+		try {
+			sys.profiles(md).forEachRemaining(profiles::add);
+		} catch (Exception e) {
+			return hint("Couldn't load macro sets: " + e.getMessage());
+		}
+		var active = sys.getActiveProfile(md);
+		var row = new HBox(10);
+		row.setAlignment(Pos.CENTER_LEFT);
+		var label = fieldLabel("Macro set");
+		var pick = combo(profiles, uk.co.bithatch.macrolib.MacroProfile::getName);
+		pick.setMaxWidth(260);
+		pick.setValue(active);
+		pick.setOnAction(e -> {
+			var p = pick.getValue();
+			if (p == null || p.equals(sys.getActiveProfile(md)))
+				return;
+			try {
+				p.makeActive();
+			} catch (Exception ex) {
+				setStatus("Couldn't switch macro set: " + ex.getMessage(), true);
+			}
+			showPage("macros");
+		});
+		var add = new Button("New set");
+		add.getStyleClass().add("ghost");
+		add.setOnAction(e -> {
+			int n = profiles.size() + 1;
+			while (sys.getProfileWithName(md, "Set " + n) != null)
+				n++;
+			try {
+				var p = sys.createProfile(md, "Set " + n);
+				p.commit();
+				p.makeActive();
+			} catch (Exception ex) {
+				setStatus("Couldn't add a macro set: " + ex.getMessage(), true);
+			}
+			showPage("macros");
+		});
+		var rename = new Button("Rename");
+		rename.getStyleClass().add("ghost");
+		rename.setOnAction(e -> {
+			var p = pick.getValue();
+			if (p == null)
+				return;
+			var tf = new javafx.scene.control.TextField(p.getName());
+			tf.setPrefWidth(260);
+			tf.setOnAction(x -> {
+				if (!tf.getText().isBlank()) {
+					p.setName(tf.getText().trim());
+					p.commit();
+				}
+				showPage("macros");
+			});
+			tf.focusedProperty().addListener((o, a, b) -> {
+				if (!b)
+					tf.getOnAction().handle(null);
+			});
+			row.getChildren().set(1, tf);
+			Platform.runLater(() -> {
+				tf.requestFocus();
+				tf.selectAll();
+			});
+		});
+		row.getChildren().addAll(label, pick, add, rename);
+		if (profiles.size() > 1) {
+			var del = new Button("Delete set");
+			del.getStyleClass().add("ghost");
+			del.setOnAction(e -> {
+				var p = pick.getValue();
+				if (p == null)
+					return;
+				if (!"sure".equals(del.getUserData())) {
+					del.setUserData("sure");
+					del.setText("Delete \"" + p.getName() + "\" and its macros?");
+					return;
+				}
+				try {
+					for (var o : profiles)
+						if (!o.equals(p)) {
+							o.makeActive();
+							break;
+						}
+					p.remove();
+				} catch (Exception ex) {
+					setStatus("Couldn't delete the macro set: " + ex.getMessage(), true);
+				}
+				showPage("macros");
+			});
+			row.getChildren().add(del);
+		}
+		return row;
+	}
+
+	private int triggerOrder(KeySequence seq) {
+		EventCode c = seq.isEmpty() ? null : seq.get(0);
+		int i = c == null ? -1 : SIDE_KEYS.indexOf(c);
+		int base = i >= 0 ? i : 100 + (c == null ? 0 : c.ordinal());
+		return base * 2 + (seq.getState() == KeyState.HELD ? 1 : 0);
+	}
+
+	private String triggerName(KeySequence seq) {
+		if (seq.isEmpty())
+			return "(no button)";
+		String n = keyName(seq.get(0));
+		return seq.getState() == KeyState.HELD ? n + ", held down" : n;
+	}
+
+	/** "A Key", "Left Shift", "Left Button" ... for an input event code. */
+	static String keyText(EventCode k) {
+		String keyName = String.valueOf(k);
+		String txt = keyName.length() > 4 ? keyName.substring(4) : keyName;
+		if (txt.length() > 3)
+			return uk.co.bithatch.snake.ui.util.Strings.toName(txt);
+		return keyName.startsWith("BTN_") ? txt + " Button" : txt + " Key";
+	}
+
+	private String keyName(EventCode c) {
+		int i = SIDE_KEYS.indexOf(c);
+		String n = keyText(c);
+		if (i >= 0 && getDevice().getName().contains("Naga"))
+			return "Side button " + (i + 1) + " (" + n + ")";
+		return n;
+	}
+
+	private String describeMacro(Macro m) {
+		String what;
+		if (m instanceof UInputMacro u)
+			what = u.getCode() == null ? "Presses nothing yet" : "Presses " + keyText(u.getCode());
+		else if (m instanceof SimpleMacro s)
+			what = "Types \"" + (s.getMacro() == null ? "" : s.getMacro()) + "\"";
+		else if (m instanceof CommandMacro c)
+			what = "Runs " + (c.getCommand() == null ? "nothing yet" : new File(c.getCommand()).getName());
+		else if (m instanceof ActionMacro a)
+			what = "Snake: " + a.getAction();
+		else if (m instanceof ScriptMacro)
+			what = "Runs a script";
+		else
+			what = "Does nothing";
+		if (m.getRepeatMode() == RepeatMode.WHILE_HELD)
+			what += ", repeats while held";
+		else if (m.getRepeatMode() == RepeatMode.TOGGLE)
+			what += ", repeat toggles on/off";
+		return what;
+	}
+
+	private static String macroKind(Macro m) {
+		if (m instanceof SimpleMacro)
+			return MACRO_KINDS[1];
+		if (m instanceof CommandMacro)
+			return MACRO_KINDS[2];
+		if (m instanceof ActionMacro)
+			return MACRO_KINDS[3];
+		if (m instanceof ScriptMacro)
+			return MACRO_KINDS[4];
+		if (m instanceof NoopMacro)
+			return MACRO_KINDS[5];
+		return MACRO_KINDS[0];
+	}
+
+	private Label fieldLabel(String text) {
+		var l = new Label(text);
+		l.getStyleClass().add("fieldLabel");
+		l.setWrapText(true);
+		return l;
+	}
+
+	private static <T> javafx.util.Callback<javafx.scene.control.ListView<T>, ListCell<T>> cells(
+			java.util.function.Function<T, String> text) {
+		return lv -> new ListCell<T>() {
+			@Override
+			protected void updateItem(T item, boolean empty) {
+				super.updateItem(item, empty);
+				setText(empty || item == null ? null : text.apply(item));
+			}
+		};
+	}
+
+	private <T> ComboBox<T> combo(java.util.Collection<T> items, java.util.function.Function<T, String> text) {
+		var cb = new ComboBox<T>();
+		cb.getItems().addAll(items);
+		cb.setCellFactory(cells(text));
+		cb.setButtonCell(cells(text).call(null));
+		cb.setMaxWidth(Double.MAX_VALUE);
+		cb.setVisibleRowCount(14);
+		return cb;
+	}
+
+	/**
+	 * Right-hand editor for one macro. {@code existing} is null for a new one.
+	 * Nothing changes until Save.
+	 */
+	private void showMacroEditor(MacroBank bank, MacroDevice md, Macro existing, KeySequence seq) {
+		closeEditor();
+		macroRows.forEach(b -> {
+			b.getStyleClass().remove("selected");
+			if (existing != null && b.getUserData() == existing)
+				b.getStyleClass().add("selected");
+		});
+		var title = new Label(existing == null ? "New macro" : triggerName(existing.getActivatedBy()));
+		title.getStyleClass().add("sectionTitle");
+		title.setWrapText(true);
+
+		/* Trigger */
+		var triggers = new ArrayList<EventCode>(SIDE_KEYS.stream()
+				.filter(c -> md.getSupportedInputEvents().contains(c)).toList());
+		for (EventCode c : EventCode.filteredForType(md.getSupportedInputEvents(), EventCode.Type.EV_KEY))
+			if (!triggers.contains(c))
+				triggers.add(c);
+		var trigger = combo(triggers, this::keyName);
+		trigger.setValue(seq.isEmpty() ? null : seq.get(0));
+		var held = new CheckBox("Only when held down");
+		held.setSelected(seq.getState() == KeyState.HELD);
+
+		/* What it does */
+		var grid = new GridPane();
+		grid.getStyleClass().add("choiceGrid");
+		var tg = new ToggleGroup();
+		var detail = new VBox(8);
+		var actions = new ArrayList<>(context.getMacroManager().getMacroSystem().getActions().values());
+
+		var keyBox = combo(EventCode.filteredForType(java.util.Arrays.asList(EventCode.values()), EventCode.Type.EV_KEY),
+				DeviceShell::keyText);
+		var text = new javafx.scene.control.TextField();
+		var command = new javafx.scene.control.TextField();
+		var args = new javafx.scene.control.TextArea();
+		args.setPrefRowCount(3);
+		var action = combo(actions, uk.co.bithatch.macrolib.Action::getId);
+		var script = new javafx.scene.control.TextArea();
+		script.setPrefRowCount(6);
+		if (existing instanceof UInputMacro u)
+			keyBox.setValue(u.getCode());
+		else if (existing instanceof SimpleMacro s)
+			text.setText(s.getMacro());
+		else if (existing instanceof CommandMacro c) {
+			command.setText(c.getCommand());
+			args.setText(c.getArguments() == null ? "" : String.join("\n", c.getArguments()));
+		} else if (existing instanceof ActionMacro a)
+			action.setValue(context.getMacroManager().getMacroSystem().getActions().get(a.getAction()));
+		else if (existing instanceof ScriptMacro sc && sc.getScript() != null)
+			script.setText(String.join("\n", sc.getScript()));
+		if (action.getValue() == null && !actions.isEmpty())
+			action.setValue(actions.get(0));
+
+		String[] kind = { existing == null ? MACRO_KINDS[1] : macroKind(existing) };
+		Runnable showDetail = () -> {
+			detail.getChildren().clear();
+			switch (kind[0]) {
+			case "Press a key" -> detail.getChildren().addAll(fieldLabel("Key to press"), keyBox);
+			case "Type text" -> detail.getChildren().addAll(fieldLabel("Text to type"), text,
+					hint("\\r = Enter, \\t = Tab, \\b = Backspace, \\e = Escape, \\p = short pause."));
+			case "Run a command" -> {
+				var browse = new Button("Browse");
+				browse.getStyleClass().add("ghost");
+				browse.setOnAction(e -> {
+					var fc = new FileChooser();
+					var f = fc.showOpenDialog(getScene().getWindow());
+					if (f != null)
+						command.setText(f.getAbsolutePath());
+				});
+				HBox.setHgrow(command, Priority.ALWAYS);
+				detail.getChildren().addAll(fieldLabel("Program"), new HBox(8, command, browse),
+						fieldLabel("Arguments, one per line"), args);
+			}
+			case "Snake action" -> detail.getChildren().addAll(fieldLabel("Action"), action);
+			case "Script" -> detail.getChildren().addAll(fieldLabel("Script"), script,
+					hint("Macro script commands, one per line."));
+			default -> detail.getChildren().add(hint("The button won't do anything."));
+			}
+		};
+		for (int i = 0; i < MACRO_KINDS.length; i++) {
+			String k = MACRO_KINDS[i];
+			if (k.equals("Snake action") && actions.isEmpty())
+				continue;
+			var tb = new ToggleButton(k);
+			tb.getStyleClass().add("segment");
+			tb.setMaxWidth(Double.MAX_VALUE);
+			tb.setToggleGroup(tg);
+			tb.setSelected(k.equals(kind[0]));
+			tb.setOnAction(e -> {
+				tb.setSelected(true);
+				kind[0] = k;
+				showDetail.run();
+			});
+			int n = grid.getChildren().size();
+			grid.add(tb, n % 2, n / 2);
+		}
+		showDetail.run();
+
+		/* Repeat */
+		var repeat = combo(List.of(RepeatMode.values()), r -> switch (r) {
+		case NONE -> "Once per press";
+		case WHILE_HELD -> "Repeat while held";
+		case TOGGLE -> "Press to start repeating, again to stop";
+		});
+		repeat.setValue(existing == null ? RepeatMode.NONE : existing.getRepeatMode());
+
+		var save = new Button("Save");
+		save.getStyleClass().add("primary");
+		save.setDefaultButton(true);
+		save.setOnAction(e -> {
+			EventCode code = trigger.getValue();
+			if (code == null) {
+				setStatus("Pick a button first.", true);
+				return;
+			}
+			var newSeq = new KeySequence(held.isSelected() ? KeyState.HELD : KeyState.UP, code);
+			Macro other = bank.getMacro(newSeq);
+			if (other != null && other != existing) {
+				setStatus(triggerName(newSeq) + " already has a macro.", true);
+				return;
+			}
+			Macro m = switch (kind[0]) {
+			case "Press a key" -> new UInputMacro(newSeq, keyBox.getValue());
+			case "Type text" -> new SimpleMacro(newSeq, text.getText());
+			case "Run a command" -> {
+				var c = new CommandMacro(newSeq, command.getText().trim());
+				c.setArguments(args.getText().isBlank() ? List.of()
+						: java.util.Arrays.stream(args.getText().split("\n")).filter(a -> !a.isBlank()).toList());
+				yield c;
+			}
+			case "Snake action" -> new ActionMacro(newSeq, action.getValue() == null ? null : action.getValue().getId());
+			case "Script" -> new ScriptMacro(newSeq, script.getText().split("\n"));
+			default -> new NoopMacro(newSeq);
+			};
+			m.setRepeatMode(repeat.getValue());
+			if (existing != null) {
+				m.setName(existing.getName());
+				m.setRepeatDelay(existing.getRepeatDelay());
+			}
+			try {
+				context.getMacroManager().validate(m);
+			} catch (uk.co.bithatch.snake.lib.ValidationException ve) {
+				setStatus(macroError(ve.getMessage()), true);
+				return;
+			}
+			try {
+				if (existing != null)
+					bank.remove(existing);
+				bank.add(m);
+				bank.commit();
+			} catch (Exception ex) {
+				setStatus("Couldn't save the macro: " + ex.getMessage(), true);
+				return;
+			}
+			setStatus("Macro saved.", false);
+			closeEditor();
+			showPage("macros");
+		});
+		var acts = new HBox(10, save);
+		if (existing != null) {
+			var del = new Button("Delete");
+			del.getStyleClass().add("ghost");
+			del.setOnAction(e -> {
+				try {
+					bank.remove(existing);
+					bank.commit();
+				} catch (Exception ex) {
+					setStatus("Couldn't delete the macro: " + ex.getMessage(), true);
+					return;
+				}
+				setStatus("Macro deleted.", false);
+				closeEditor();
+				showPage("macros");
+			});
+			acts.getChildren().add(del);
+		}
+		acts.getChildren().add(cancelButton("Cancel"));
+
+		editor.getChildren().setAll(title, fieldLabel("Button"), trigger, held, fieldLabel("Make it"), grid, detail,
+				fieldLabel("Repeat"), repeat, acts);
+		editor.setVisible(true);
+	}
+
+	private static String macroError(String key) {
+		return switch (key) {
+		case "error.missingUInputCode" -> "Pick a key to press.";
+		case "error.missingSimpleMacro" -> "Type the text first.";
+		case "error.missingScript" -> "The script is empty.";
+		case "error.missingCommand" -> "Pick a program to run.";
+		default -> key.startsWith("error.") ? "Pick an action." : key;
+		};
 	}
 
 	/* ---- Devices page ---- */
@@ -1246,11 +1953,88 @@ public class DeviceShell extends AbstractDeviceController {
 		grid.getStyleClass().add("settingsGrid");
 		int row = 0;
 
-		var more = new Button("Open");
-		more.getStyleClass().add("ghost");
-		more.setOnAction(e -> context.push(Options.class, this, Direction.FROM_RIGHT));
-		grid.addRow(row++, settingText("Snake options", "Theme, tray icon, start with the computer, updates and more."),
-				more);
+		var cfg = context.getConfiguration();
+		var ps = PlatformService.isPlatformSupported() ? PlatformService.get() : null;
+
+		var tray = combo(List.of(TrayIcon.values()), t -> switch (t) {
+		case OFF -> "No tray icon";
+		case AUTO -> "Automatic";
+		case DARK -> "Dark";
+		case LIGHT -> "Light";
+		default -> "Colour";
+		});
+		tray.setValue(cfg.getTrayIcon());
+		tray.setMaxWidth(200);
+		grid.addRow(row++, settingText("Tray icon", "The icon in the panel. Turning it off also stops Snake starting with the computer."), tray);
+
+		CheckBox login = null;
+		if (ps != null) {
+			var lg = new CheckBox("On");
+			lg.setSelected(ps.isStartOnLogin());
+			lg.setDisable(cfg.getTrayIcon() == TrayIcon.OFF);
+			lg.setOnAction(e -> {
+				try {
+					ps.setStartOnLogin(lg.isSelected() && cfg.getTrayIcon() != TrayIcon.OFF);
+				} catch (Exception ex) {
+					setStatus("Couldn't change start with the computer: " + ex.getMessage(), true);
+				}
+			});
+			grid.addRow(row++, settingText("Start with the computer", "Open Snake in the tray when you log in, so macros and effects keep working."), lg);
+			login = lg;
+		}
+		var fLogin = login;
+		tray.setOnAction(e -> {
+			cfg.setTrayIcon(tray.getValue());
+			if (fLogin != null) {
+				fLogin.setDisable(tray.getValue() == TrayIcon.OFF);
+				try {
+					ps.setStartOnLogin(fLogin.isSelected() && tray.getValue() != TrayIcon.OFF);
+				} catch (Exception ex) {
+					setStatus("Couldn't change start with the computer: " + ex.getMessage(), true);
+				}
+			}
+		});
+
+		if (context.getBackend().getCapabilities().contains(uk.co.bithatch.snake.lib.Capability.BATTERY)) {
+			var bat = new CheckBox("Show");
+			bat.setSelected(cfg.isShowBattery());
+			var low = new CheckBox("Only when low");
+			low.setSelected(cfg.isWhenLow());
+			low.setDisable(!bat.isSelected());
+			bat.setOnAction(e -> {
+				cfg.setShowBattery(bat.isSelected());
+				low.setDisable(!bat.isSelected());
+			});
+			low.setOnAction(e -> cfg.setWhenLow(low.isSelected()));
+			grid.addRow(row++, settingText("Battery in tray", "Show the battery level on the tray icon."), new HBox(14, bat, low));
+		}
+
+		if (ps != null && ps.isUpdateableApp()) {
+			var check = new CheckBox("Check");
+			check.setSelected(ps.isCheckForUpdates());
+			var auto = new CheckBox("Install automatically");
+			auto.setSelected(ps.isUpdateAutomatically());
+			auto.setDisable(!check.isSelected());
+			check.setOnAction(e -> {
+				ps.setCheckForUpdates(check.isSelected());
+				auto.setDisable(!check.isSelected());
+			});
+			auto.setOnAction(e -> ps.setUpdateAutomatically(auto.isSelected()));
+			var upd = new HBox(14, check, auto);
+			upd.setAlignment(Pos.CENTER_LEFT);
+			String desc = "Snake updates itself from its GitHub page.";
+			if (ps.isUpdateAvailable() && ps.isCheckForUpdates()) {
+				desc = "Update available: " + ps.getAvailableVersion() + " (you have " + ps.getInstalledVersion() + ").";
+				var now = new Button("Update now");
+				now.getStyleClass().add("primary");
+				now.setOnAction(e -> {
+					now.setDisable(true);
+					ps.startUpdate();
+				});
+				upd.getChildren().add(now);
+			}
+			grid.addRow(row++, settingText("Updates", desc), upd);
+		}
 
 		if (onboard != null) {
 			var backup = new Button("Back up");
@@ -1275,12 +2059,59 @@ public class DeviceShell extends AbstractDeviceController {
 			}
 		}
 
-		var about = new Button("Open");
-		about.getStyleClass().add("ghost");
-		about.setOnAction(e -> context.push(About.class, this, Direction.FROM_RIGHT));
-		grid.addRow(row++, settingText("About Snake", "Version and credits."), about);
 		box.getChildren().add(grid);
+
+		var sep = new Region();
+		sep.getStyleClass().add("divider");
+		box.getChildren().addAll(sep, sectionTitle("About Snake"));
+		String version = ps == null ? "unknown" : ps.getInstalledVersion();
+		String backend;
+		try {
+			backend = context.getBackend().getName() + " " + context.getBackend().getVersion();
+		} catch (Exception e) {
+			backend = context.getBackend().getName();
+		}
+		box.getChildren().addAll(hint("Version " + version + ", using " + backend + "."),
+				hint("Snake was made by Brett Smith (2020) and is free software under the GPL 3."));
+		var changes = new Button("What's new");
+		changes.getStyleClass().add("ghost");
+		changes.setOnAction(e -> showChanges());
+		box.getChildren().add(changes);
 		return box;
+	}
+
+	/** The change log (CHANGES.md), as plain text in the right-hand panel. */
+	public void showChanges() {
+		closeEditor();
+		var title = new Label("What's new");
+		title.getStyleClass().add("sectionTitle");
+		var body = new VBox(4);
+		File dir = new File(System.getProperty("user.dir"));
+		File f = new File(dir, "pom.xml").exists() ? new File(dir.getParentFile(), "CHANGES.md")
+				: new File(dir, "docs" + File.separator + "CHANGES.md");
+		try {
+			for (String line : Files.readAllLines(f.toPath())) {
+				if (line.isBlank())
+					continue;
+				Label l;
+				if (line.startsWith("#")) {
+					l = new Label(line.replaceFirst("^#+\\s*", ""));
+					l.getStyleClass().add("fieldLabel");
+				} else {
+					l = hint(line.replaceFirst("^\\s*[-*]\\s*", "\u2022 ").replace("`", "").replace("**", ""));
+				}
+				l.setWrapText(true);
+				body.getChildren().add(l);
+			}
+		} catch (Exception e) {
+			body.getChildren().add(hint("The change log couldn't be found."));
+		}
+		var sp = new ScrollPane(body);
+		sp.setFitToWidth(true);
+		sp.getStyleClass().add("shellScroll");
+		VBox.setVgrow(sp, Priority.ALWAYS);
+		editor.getChildren().setAll(title, sp, cancelButton("Close"));
+		editor.setVisible(true);
 	}
 
 	private Node settingText(String title, String desc) {

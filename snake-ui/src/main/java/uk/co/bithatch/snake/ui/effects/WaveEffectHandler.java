@@ -6,12 +6,11 @@ import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Wave;
 import uk.co.bithatch.snake.lib.effects.Wave.Direction;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
-import uk.co.bithatch.snake.ui.WaveOptions;
 
-public class WaveEffectHandler extends AbstractBackendEffectHandler<Wave, WaveOptions> {
+public class WaveEffectHandler extends AbstractBackendEffectHandler<Wave> {
 
 	public WaveEffectHandler() {
-		super(Wave.class, WaveOptions.class);
+		super(Wave.class);
 	}
 
 	@Override
@@ -24,13 +23,5 @@ public class WaveEffectHandler extends AbstractBackendEffectHandler<Wave, WaveOp
 		prefs.put("direction", effect.getDirection().name());
 	}
 
-	@Override
-	protected void onStore(Lit component, WaveOptions controller) throws Exception {
-		Wave wave = (Wave) controller.getEffect().clone();
-		Direction dir = controller.getDirection();
-		wave.setDirection(dir);
-		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(wave));
-		save(component, wave);
-	}
 
 }

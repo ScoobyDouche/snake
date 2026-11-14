@@ -11,6 +11,7 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.ptr.IntByReference;
 
 import dorkbox.systemTray.SystemTray;
 
@@ -45,6 +46,8 @@ class XAppTray {
 				Pointer destroy, int flags);
 
 		void g_object_unref(Pointer object);
+
+		int g_timeout_add(int interval, GSourceFunc function, Pointer data);
 	}
 
 	public interface Indicator extends Library {
@@ -53,12 +56,40 @@ class XAppTray {
 		void app_indicator_set_status(Pointer indicator, int status);
 	}
 
+	public interface Gtk extends Library {
+		int gtk_widget_get_visible(Pointer widget);
+
+		void gtk_menu_shell_deactivate(Pointer menuShell);
+
+		Pointer gdk_display_get_default();
+
+		Pointer gdk_display_get_default_seat(Pointer display);
+
+		Pointer gdk_seat_get_pointer(Pointer seat);
+
+		Pointer gdk_get_default_root_window();
+
+		void gdk_device_get_state(Pointer device, Pointer window, Pointer axes, IntByReference mask);
+
+		Pointer gdk_device_get_window_at_position(Pointer device, Pointer winX, Pointer winY);
+
+		Pointer gdk_window_get_toplevel(Pointer window);
+
+		int gdk_window_get_window_type(Pointer window);
+	}
+
+	public interface GSourceFunc extends Callback {
+		int callback(Pointer data);
+	}
+
 	/** button-release-event (icon, x, y, button, time, panel_position, data) */
 	public interface ButtonReleaseCallback extends Callback {
 		void callback(Pointer icon, int x, int y, int button, int time, int panelPosition, Pointer data);
 	}
 
 	private static final int APP_INDICATOR_STATUS_PASSIVE = 0;
+	private static final int GDK_BUTTONS_MASK = (1 << 8) | (1 << 9) | (1 << 10);
+	private static final int GDK_WINDOW_TEMP = 3;
 
 	private final SystemTray systemTray;
 	private final Runnable onLeftClick;
@@ -67,6 +98,9 @@ class XAppTray {
 	private final Indicator indicator;
 	/* Held in a field so JNA's callback isn't garbage collected */
 	private final ButtonReleaseCallback releaseCallback;
+	private final Gtk gtk;
+	private final GSourceFunc menuWatch;
+	private Pointer openMenu;
 	private Pointer icon;
 
 	static boolean isSupported() {
@@ -82,6 +116,8 @@ class XAppTray {
 		xapp = Native.load("xapp", XApp.class);
 		glib = Native.load("gobject-2.0", GLib.class);
 		indicator = Native.load("ayatana-appindicator3", Indicator.class);
+		gtk = Native.load("gtk-3", Gtk.class);
+		menuWatch = data -> watchMenu();
 		releaseCallback = (i, x, y, button, time, panelPosition, data) -> {
 			try {
 				if (button == 1) {
@@ -89,8 +125,12 @@ class XAppTray {
 				} else if (button == 3) {
 					var ind = indicatorPointer();
 					var menu = ind == null ? null : indicator.app_indicator_get_menu(ind);
-					if (menu != null)
+					if (menu != null) {
 						xapp.xapp_status_icon_popup_menu(icon, menu, x, y, button, time, panelPosition);
+						if (openMenu == null)
+							glib.g_timeout_add(50, menuWatch, null);
+						openMenu = menu;
+					}
 				}
 			} catch (Throwable t) {
 				LOG.log(Level.WARNING, "Tray click failed.", t);
@@ -132,6 +172,41 @@ class XAppTray {
 				icon = null;
 			}
 		});
+	}
+
+	/**
+	 * The click on Cinnamon's panel still holds the pointer grab when the menu
+	 * pops up, so GTK can't grab it and clicks outside the menu never reach us:
+	 * the menu would stay up forever. Poll instead (on the GTK thread): a mouse
+	 * button held down anywhere but over one of our popup windows closes it.
+	 * Returns FALSE (stop) once the menu is gone.
+	 */
+	private int watchMenu() {
+		try {
+			var menu = openMenu;
+			if (menu == null || gtk.gtk_widget_get_visible(menu) == 0) {
+				openMenu = null;
+				return 0;
+			}
+			var pointer = gtk.gdk_seat_get_pointer(gtk.gdk_display_get_default_seat(gtk.gdk_display_get_default()));
+			var mask = new IntByReference();
+			gtk.gdk_device_get_state(pointer, gtk.gdk_get_default_root_window(), null, mask);
+			if ((mask.getValue() & GDK_BUTTONS_MASK) != 0) {
+				var under = gtk.gdk_device_get_window_at_position(pointer, null, null);
+				boolean overPopup = under != null
+						&& gtk.gdk_window_get_window_type(gtk.gdk_window_get_toplevel(under)) == GDK_WINDOW_TEMP;
+				if (!overPopup) {
+					gtk.gtk_menu_shell_deactivate(menu);
+					openMenu = null;
+					return 0;
+				}
+			}
+			return 1;
+		} catch (Throwable t) {
+			LOG.log(Level.WARNING, "Tray menu watch failed.", t);
+			openMenu = null;
+			return 0;
+		}
 	}
 
 	/* dorkbox internals (SystemTray 4.1, _AppIndicatorNativeTray) */

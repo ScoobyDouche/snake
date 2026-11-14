@@ -4,17 +4,13 @@ import java.net.URL;
 import java.util.prefs.Preferences;
 
 import uk.co.bithatch.snake.lib.Lit;
-import uk.co.bithatch.snake.ui.AbstractEffectController;
 
-public abstract class AbstractPersistentEffectHandler<E, O extends AbstractEffectController<E, ?>>
-		extends AbstractEffectHandler<E, O> {
+public abstract class AbstractPersistentEffectHandler<E> extends AbstractEffectHandler<E> {
 
 	private Class<E> clazz;
-	private Class<O> controllerClass;
 
-	protected AbstractPersistentEffectHandler(Class<E> clazz, Class<O> controllerClass) {
+	protected AbstractPersistentEffectHandler(Class<E> clazz) {
 		this.clazz = clazz;
-		this.controllerClass = controllerClass;
 	}
 
 	@Override
@@ -26,10 +22,6 @@ public abstract class AbstractPersistentEffectHandler<E, O extends AbstractEffec
 		return clazz;
 	}
 
-	@Override
-	public Class<O> getOptionsController() {
-		return controllerClass;
-	}
 
 	@Override
 	public boolean isSupported(Lit component) {

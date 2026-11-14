@@ -58,12 +58,9 @@ import uk.co.bithatch.snake.lib.Region;
 import uk.co.bithatch.snake.lib.binding.Profile;
 import uk.co.bithatch.snake.lib.binding.ProfileMap;
 import uk.co.bithatch.snake.ui.App;
-import uk.co.bithatch.snake.ui.BatteryControl;
 import uk.co.bithatch.snake.ui.Configuration;
 import uk.co.bithatch.snake.ui.Configuration.TrayIcon;
-import uk.co.bithatch.snake.ui.DeviceDetails;
 import uk.co.bithatch.snake.ui.EffectHandler;
-import uk.co.bithatch.snake.ui.Macros;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 import uk.co.bithatch.snake.ui.effects.EffectAcquisition;
 import uk.co.bithatch.snake.widgets.Direction;
@@ -171,7 +168,11 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 					(e) -> {
 						Platform.runLater(() -> {
 							context.open();
-							context.push(Macros.class, Direction.FROM_BOTTOM).setDevice(device);
+							try {
+								context.openDevice(device, "macros");
+							} catch (Exception ex) {
+								LOG.log(Level.ERROR, "Failed to open macros.", ex);
+							}
 						});
 					});
 			menu.add(macros);
@@ -217,31 +218,33 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 	}
 
 	void addEffectsMenu(Lit lit, Menu menu, Device device, boolean addToRoot) {
-		EffectHandler<?, ?> configurable = null;
+		EffectHandler<?> configurable = null;
 		EffectAcquisition acq = context.getEffectManager().getRootAcquisition(Lit.getDevice(lit));
 		if (acq == null)
 			return;
-		EffectHandler<?, ?> selected = acq.getEffect(lit);
-		for (EffectHandler<?, ?> fx : context.getEffectManager().getEffects(lit)) {
+		EffectHandler<?> selected = acq.getEffect(lit);
+		for (EffectHandler<?> fx : context.getEffectManager().getEffects(lit)) {
 			var mi = new MenuItem(fx.getDisplayName(), (e) -> {
 				context.getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> acq.activate(lit, fx));
 			});
 			mi.setImage(fx.getEffectImage(24));
 			menu.add(mi);
-			if (fx.hasOptions() && fx.equals(selected)) {
+			if (uk.co.bithatch.snake.ui.DeviceShell.hasSettings(fx) && fx.equals(selected)) {
 				configurable = fx;
 			}
 			if (addToRoot)
 				menuEntries.add(mi);
 		}
-		EffectHandler<?, ?> fConfigurable = configurable;
+		EffectHandler<?> fConfigurable = configurable;
 		if (configurable != null) {
 			var mi = new MenuItem(bundle.getString("effectOptions"), createAwesomeIcon(FontAwesome.GEAR, 32), (e) -> {
 				Platform.runLater(() -> {
 					context.open();
-					var dev = context.push(DeviceDetails.class, Direction.FROM_RIGHT);
-					dev.setDevice(device);
-					dev.configure(lit, fConfigurable);
+					try {
+						context.openDevice(device, "lighting").showEffectOptions(fConfigurable);
+					} catch (Exception ex) {
+						LOG.log(Level.ERROR, "Failed to open effect settings.", ex);
+					}
 				});
 			});
 			menu.add(mi);
@@ -547,13 +550,13 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 				&& (!cfg.isWhenLow() || (cfg.isWhenLow()
 						&& context.getBackend().getBattery() <= context.getBackend().getLowBatteryThreshold()))) {
 			Color col = null;
-			String status = BatteryControl.getBatteryStyle(context.getBackend().getLowBatteryThreshold(),
+			String status = batteryStyle(context.getBackend().getLowBatteryThreshold(),
 					context.getBackend().getBattery());
 			if ("danger".equals(status))
 				col = Color.RED;
 			else if ("warning".equals(status))
 				col = Color.ORANGE;
-			systemTray.setImage(createAwesomeIcon(BatteryControl.getBatteryIcon(context.getBackend().getBattery()), 32,
+			systemTray.setImage(createAwesomeIcon(batteryIcon(context.getBackend().getBattery()), 32,
 					100, col, 270));
 		} else {
 			String name = "tray";
@@ -643,5 +646,28 @@ public class Tray implements AutoCloseable, BackendListener, Listener, Preferenc
 
 	@Override
 	public void eventRecorded() {
+	}
+
+	private static FontAwesome batteryIcon(int level) {
+		if (level < 1)
+			return FontAwesome.BATTERY_EMPTY;
+		else if (level <= 25)
+			return FontAwesome.BATTERY_QUARTER;
+		else if (level <= 50)
+			return FontAwesome.BATTERY_HALF;
+		else if (level <= 75)
+			return FontAwesome.BATTERY_THREE_QUARTERS;
+		return FontAwesome.BATTERY_FULL;
+	}
+
+	private static String batteryStyle(int lowest, int level) {
+		int low = (99 - lowest) / 3;
+		if (level < 1 || level <= lowest)
+			return "danger";
+		else if (level <= low)
+			return "warning";
+		else if (level <= low * 2)
+			return "success";
+		return null;
 	}
 }

@@ -33,9 +33,9 @@ public class EffectManager implements BackendListener, Closeable {
 	private final class EffectAcquisitionImpl implements EffectAcquisition {
 		private final Device device;
 		private final Stack<EffectAcquisitionImpl> stack;
-		private Map<Lit, EffectHandler<?, ?>> effects = new HashMap<>();
+		private Map<Lit, EffectHandler<?>> effects = new HashMap<>();
 		private List<EffectChangeListener> listeners = new ArrayList<>();
-		private Map<Lit, EffectHandler<?, ?>> active = Collections.synchronizedMap(new HashMap<>());
+		private Map<Lit, EffectHandler<?>> active = Collections.synchronizedMap(new HashMap<>());
 		private Map<Lit, Object> activations = Collections.synchronizedMap(new HashMap<>());
 
 		private EffectAcquisitionImpl(Device device, Stack<EffectAcquisitionImpl> stack) {
@@ -51,7 +51,7 @@ public class EffectManager implements BackendListener, Closeable {
 		@Override
 		public void deactivate(Lit lit) {
 			/* This current effect */
-			EffectHandler<?, ?> effect = effects.get(lit);
+			EffectHandler<?> effect = effects.get(lit);
 			if (effect != null) {
 				if (LOG.isLoggable(Level.DEBUG))
 					LOG.log(Level.DEBUG,
@@ -63,7 +63,7 @@ public class EffectManager implements BackendListener, Closeable {
 		@Override
 		public void remove(Lit lit) {
 			/* This current effect */
-			EffectHandler<?, ?> effect = effects.remove(lit);
+			EffectHandler<?> effect = effects.remove(lit);
 
 			if (effect != null) {
 
@@ -82,7 +82,7 @@ public class EffectManager implements BackendListener, Closeable {
 		}
 
 		@Override
-		public void activate(Lit lit, EffectHandler<?, ?> effect) {
+		public void activate(Lit lit, EffectHandler<?> effect) {
 			if (LOG.isLoggable(Level.DEBUG))
 				LOG.log(Level.DEBUG,
 						String.format("Activating effect %s on %s", effect.getDisplayName(), lit.toString()));
@@ -154,7 +154,7 @@ public class EffectManager implements BackendListener, Closeable {
 					if (deviceStack != null && !deviceStack.isEmpty()) {
 						EffectAcquisition iface = deviceStack.peek();
 						for (Lit subLit : iface.getLitAreas()) {
-							EffectHandler<?, ?> litEffect = iface.getEffect(subLit);
+							EffectHandler<?> litEffect = iface.getEffect(subLit);
 							if (litEffect != null)
 								activate(subLit, litEffect);
 						}
@@ -170,16 +170,16 @@ public class EffectManager implements BackendListener, Closeable {
 
 		@SuppressWarnings("resource")
 		@Override
-		public EffectHandler<?, ?> getEffect(Lit lit) {
+		public EffectHandler<?> getEffect(Lit lit) {
 			if (effects.containsKey(lit)) {
 				return effects.get(lit);
 			} else {
 				String effectName = getPreferences(lit).get(EffectManager.PREF_EFFECT, "");
 				if (lit instanceof Device) {
 					if (effectName.equals("")) {
-						EffectHandler<?, ?> leffect = null;
+						EffectHandler<?> leffect = null;
 						for (Region r : Lit.getDevice(lit).getRegions()) {
-							EffectHandler<?, ?> reffect = getEffect(r);
+							EffectHandler<?> reffect = getEffect(r);
 							if (leffect != null && !Objects.equals(reffect, leffect)) {
 								/* Different effects on different regions */
 								return null;
@@ -214,12 +214,12 @@ public class EffectManager implements BackendListener, Closeable {
 				if (this == stack.peek()) {
 					if (lit instanceof Device) {
 						for (Region r : Lit.getDevice(lit).getRegions()) {
-							EffectHandler<?, ?> litEffect = effects.get(r);
+							EffectHandler<?> litEffect = effects.get(r);
 							if (litEffect != null)
 								litEffect.update(r);
 						}
 					} else {
-						EffectHandler<?, ?> litEffect = effects.get(lit);
+						EffectHandler<?> litEffect = effects.get(lit);
 						if (litEffect != null)
 							litEffect.update(lit);
 					}
@@ -228,7 +228,7 @@ public class EffectManager implements BackendListener, Closeable {
 		}
 
 		@Override
-		public <E extends EffectHandler<?, ?>> E activate(Lit region, Class<E> class1) {
+		public <E extends EffectHandler<?>> E activate(Lit region, Class<E> class1) {
 			E fx = findEffect(region, class1);
 			if (fx != null)
 				activate(region, fx);
@@ -238,7 +238,7 @@ public class EffectManager implements BackendListener, Closeable {
 		protected void deactivateDevicesRegions(Device lit) {
 			/* If there are region region effects, deactivate and remove those first */
 			for (Region r : lit.getRegions()) {
-				EffectHandler<?, ?> regionEffect = effects.remove(r);
+				EffectHandler<?> regionEffect = effects.remove(r);
 				if (regionEffect != null) {
 					if (LOG.isLoggable(Level.DEBUG))
 						LOG.log(Level.DEBUG, String.format("Deactivating devices region effect %s on %s",
@@ -257,7 +257,7 @@ public class EffectManager implements BackendListener, Closeable {
 			 * activating a device, replace with individual regions.
 			 */
 			Device litDevice = Lit.getDevice(region);
-			EffectHandler<?, ?> deviceEffect = effects.remove(litDevice);
+			EffectHandler<?> deviceEffect = effects.remove(litDevice);
 			if (deviceEffect != null) {
 				if (LOG.isLoggable(Level.DEBUG))
 					LOG.log(Level.DEBUG, String.format("Deactivating regions device effect %s on %s",
@@ -271,9 +271,9 @@ public class EffectManager implements BackendListener, Closeable {
 	}
 
 	public interface Listener {
-		void effectAdded(Device component, EffectHandler<?, ?> effect);
+		void effectAdded(Device component, EffectHandler<?> effect);
 
-		void effectRemoved(Device component, EffectHandler<?, ?> effect);
+		void effectRemoved(Device component, EffectHandler<?> effect);
 	}
 
 	public static final String PREF_EFFECT = "effect";
@@ -287,7 +287,7 @@ public class EffectManager implements BackendListener, Closeable {
 
 	private Map<Device, Stack<EffectAcquisitionImpl>> acquisitions = new HashMap<>();
 	private App context;
-	private Map<Device, Map<String, EffectHandler<?, ?>>> effectHandlers = Collections
+	private Map<Device, Map<String, EffectHandler<?>>> effectHandlers = Collections
 			.synchronizedMap(new LinkedHashMap<>());
 	private List<Listener> listeners = new ArrayList<>();
 
@@ -305,14 +305,14 @@ public class EffectManager implements BackendListener, Closeable {
 		return iface;
 	}
 
-	public void add(Device device, EffectHandler<?, ?> handler) {
+	public void add(Device device, EffectHandler<?> handler) {
 		if (device == null)
 			throw new IllegalArgumentException("Must provide device.");
 
 		if (LOG.isLoggable(Level.DEBUG))
 			LOG.log(Level.DEBUG, String.format("Adding effect handler %s to device %s", device.getName(),
 					handler.getClass().getName()));
-		Map<String, EffectHandler<?, ?>> deviceEffectHandlers = getDeviceEffectHandlers(device);
+		Map<String, EffectHandler<?>> deviceEffectHandlers = getDeviceEffectHandlers(device);
 		checkForName(handler, deviceEffectHandlers);
 
 		if (handler.getName() == null || handler.getName().equals(""))
@@ -339,12 +339,12 @@ public class EffectManager implements BackendListener, Closeable {
 		this.listeners.add(listener);
 	}
 
-	public Map<String, EffectHandler<?, ?>> getDeviceEffectHandlers(Device device) {
-		Map<String, EffectHandler<?, ?>> deviceEffectHandlers = effectHandlers.get(device);
+	public Map<String, EffectHandler<?>> getDeviceEffectHandlers(Device device) {
+		Map<String, EffectHandler<?>> deviceEffectHandlers = effectHandlers.get(device);
 		if (deviceEffectHandlers == null) {
 			deviceEffectHandlers = new LinkedHashMap<>();
 			effectHandlers.put(device, deviceEffectHandlers);
-			for (EffectHandler<?, ?> handler : ServiceLoader.load(EffectHandler.class)) {
+			for (EffectHandler<?> handler : ServiceLoader.load(EffectHandler.class)) {
 				addEffect(device, handler);
 			}
 			Preferences devPrefs = getPreferences(device);
@@ -363,19 +363,19 @@ public class EffectManager implements BackendListener, Closeable {
 	}
 
 	@SuppressWarnings("unchecked")
-	public <E extends AbstractBackendEffectHandler<?, ?>> E getEffect(Device device, Class<E> effect) {
+	public <E extends AbstractBackendEffectHandler<?>> E getEffect(Device device, Class<E> effect) {
 		return (E) getEffect(device, effect.getSimpleName());
 	}
 
 	@SuppressWarnings("unchecked")
-	public <H extends EffectHandler<?, ?>> H getEffect(Device device, String name) {
+	public <H extends EffectHandler<?>> H getEffect(Device device, String name) {
 		return (H) getDeviceEffectHandlers(device).get(name);
 	}
 
-	public Set<EffectHandler<?, ?>> getEffects(Lit component) {
-		Set<EffectHandler<?, ?>> filteredHandlers = new LinkedHashSet<>();
-		Map<String, EffectHandler<?, ?>> deviceEffectHandlers = getDeviceEffectHandlers(Lit.getDevice(component));
-		for (EffectHandler<?, ?> h : deviceEffectHandlers.values()) {
+	public Set<EffectHandler<?>> getEffects(Lit component) {
+		Set<EffectHandler<?>> filteredHandlers = new LinkedHashSet<>();
+		Map<String, EffectHandler<?>> deviceEffectHandlers = getDeviceEffectHandlers(Lit.getDevice(component));
+		for (EffectHandler<?> h : deviceEffectHandlers.values()) {
 			if (h.isSupported(component)) {
 				filteredHandlers.add(h);
 			}
@@ -407,19 +407,19 @@ public class EffectManager implements BackendListener, Closeable {
 		}
 	}
 
-	public boolean isSupported(Lit component, Class<? extends EffectHandler<?, ?>> clazz) {
+	public boolean isSupported(Lit component, Class<? extends EffectHandler<?>> clazz) {
 		return findEffect(component, clazz) != null || isMatrixEffect(component, clazz);
 	}
 
-	protected boolean isMatrixEffect(Lit component, Class<? extends EffectHandler<?, ?>> clazz) {
+	protected boolean isMatrixEffect(Lit component, Class<? extends EffectHandler<?>> clazz) {
 		/* TODO make this better */
 		return (clazz.equals(CustomEffectHandler.class) || clazz.equals(AudioEffectHandler.class))
 				&& Lit.getDevice(component).getCapabilities().contains(Capability.MATRIX);
 	}
 
-	public void remove(EffectHandler<?, ?> handler) {
+	public void remove(EffectHandler<?> handler) {
 
-		Map<String, EffectHandler<?, ?>> deviceEffectHandlers = getDeviceEffectHandlers(handler.getDevice());
+		Map<String, EffectHandler<?>> deviceEffectHandlers = getDeviceEffectHandlers(handler.getDevice());
 		if (deviceEffectHandlers.containsKey(handler.getName())) {
 			/* Deactivate the effect on any device or region that is using it */
 			synchronized (acquisitions) {
@@ -444,7 +444,7 @@ public class EffectManager implements BackendListener, Closeable {
 			synchronized (acquisitions) {
 				for (Map.Entry<Device, Stack<EffectAcquisitionImpl>> en : acquisitions.entrySet()) {
 					for (EffectAcquisitionImpl acq : en.getValue()) {
-						Set<EffectHandler<?, ?>> effectsNow = getEffects(handler.getDevice());
+						Set<EffectHandler<?>> effectsNow = getEffects(handler.getDevice());
 						if (!effectsNow.isEmpty())
 							acq.activate(handler.getDevice(), effectsNow.iterator().next());
 					}
@@ -460,8 +460,8 @@ public class EffectManager implements BackendListener, Closeable {
 		this.listeners.remove(listener);
 	}
 
-	protected void addEffect(Device device, EffectHandler<?, ?> handler) {
-		Map<String, EffectHandler<?, ?>> deviceEffectHandlers = getDeviceEffectHandlers(device);
+	protected void addEffect(Device device, EffectHandler<?> handler) {
+		Map<String, EffectHandler<?>> deviceEffectHandlers = getDeviceEffectHandlers(device);
 		if (deviceEffectHandlers.containsKey(handler.getName())) {
 			throw new IllegalStateException(String.format(
 					"Attempt to register more than one effect named %s. Please rename the %s implementation, only the class name itself is used and must be unique.",
@@ -474,7 +474,7 @@ public class EffectManager implements BackendListener, Closeable {
 		handler.open(context, device);
 	}
 
-	protected void checkForName(EffectHandler<?, ?> handler, Map<String, EffectHandler<?, ?>> deviceEffectHandlers) {
+	protected void checkForName(EffectHandler<?> handler, Map<String, EffectHandler<?>> deviceEffectHandlers) {
 		if (deviceEffectHandlers.containsKey(handler.getName())) {
 			throw new IllegalStateException(String.format(
 					"Attempt to register more than one effect named %s. Please rename the %s implementation, only the class name itself is used and must be unique.",
@@ -496,18 +496,18 @@ public class EffectManager implements BackendListener, Closeable {
 	 * The saved effect if it can run on this device, otherwise a supported effect
 	 * with the same name (e.g. the software version of Audio or Breath), or null.
 	 */
-	private EffectHandler<?, ?> usable(Device dev, EffectHandler<?, ?> fx) {
+	private EffectHandler<?> usable(Device dev, EffectHandler<?> fx) {
 		if (fx == null || dev.getSupportedEffects().contains(fx.getBackendEffectClass()) || fx.isSupported(dev))
 			return fx;
-		for (EffectHandler<?, ?> alt : getEffects(dev)) {
+		for (EffectHandler<?> alt : getEffects(dev)) {
 			if (alt.getDisplayName().equals(fx.getDisplayName()))
 				return alt;
 		}
 		return null;
 	}
 
-	private <H extends EffectHandler<?, ?>> H findEffect(Lit component, Class<H> clazz) {
-		for (EffectHandler<?, ?> eh : getEffects(component)) {
+	private <H extends EffectHandler<?>> H findEffect(Lit component, Class<H> clazz) {
+		for (EffectHandler<?> eh : getEffects(component)) {
 			if (eh.getClass().equals(clazz))
 				return (H) eh;
 		}
@@ -560,7 +560,7 @@ public class EffectManager implements BackendListener, Closeable {
 			if (context.getPreferences(dev).getBoolean(PREF_SAVED_LIGHTING, false))
 				return;
 
-			EffectHandler<?, ?> deviceEffect = usable(dev, acq.getEffect(dev));
+			EffectHandler<?> deviceEffect = usable(dev, acq.getEffect(dev));
 			boolean activated = false;
 			if (deviceEffect != null && !deviceEffect.isRegions()) {
 				/* Always activates at device level */
@@ -569,7 +569,7 @@ public class EffectManager implements BackendListener, Closeable {
 			} else {
 				/* No effect configured for device as a whole, check the regions */
 				for (Region r : dev.getRegions()) {
-					EffectHandler<?, ?> regionEffect = acq.getEffect(r);
+					EffectHandler<?> regionEffect = acq.getEffect(r);
 					if (regionEffect != null && regionEffect.isRegions()) {
 						try {
 							acq.activate(r, regionEffect);
@@ -590,10 +590,10 @@ public class EffectManager implements BackendListener, Closeable {
 
 			if (!activated) {
 				/* Get the first effect and activate on whole device */
-				Set<EffectHandler<?, ?>> effects = getEffects(dev);
-				Iterator<EffectHandler<?, ?>> it = effects.iterator();
+				Set<EffectHandler<?>> effects = getEffects(dev);
+				Iterator<EffectHandler<?>> it = effects.iterator();
 				while (it.hasNext()) {
-					EffectHandler<?, ?> fx = it.next();
+					EffectHandler<?> fx = it.next();
 					if (dev.getSupportedEffects().contains(fx.getBackendEffectClass())) {
 						acq.activate(dev, fx);
 						break;

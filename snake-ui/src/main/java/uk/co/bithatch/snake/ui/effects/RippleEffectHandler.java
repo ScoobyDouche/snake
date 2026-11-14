@@ -6,13 +6,12 @@ import uk.co.bithatch.snake.lib.Colors;
 import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Ripple;
 import uk.co.bithatch.snake.lib.effects.Ripple.Mode;
-import uk.co.bithatch.snake.ui.RippleOptions;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 
-public class RippleEffectHandler extends AbstractBackendEffectHandler<Ripple, RippleOptions> {
+public class RippleEffectHandler extends AbstractBackendEffectHandler<Ripple> {
 
 	public RippleEffectHandler() {
-		super(Ripple.class, RippleOptions.class);
+		super(Ripple.class);
 	}
 
 	@Override
@@ -29,15 +28,5 @@ public class RippleEffectHandler extends AbstractBackendEffectHandler<Ripple, Ri
 		prefs.put("color", Colors.toHex(effect.getColor()));
 	}
 
-	@Override
-	protected void onStore(Lit component, RippleOptions controller) throws Exception {
-		Ripple ripple = (Ripple) controller.getEffect().clone();
-		ripple.setMode(controller.getMode());
-		ripple.setColor(controller.getColor());
-		ripple.setRefreshRate(controller.getRefreshRate());
-		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(ripple));
-		save(component, ripple);
-		
-	}
 
 }

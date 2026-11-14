@@ -58,10 +58,6 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		<dependency>
-			<groupId>uk.co.bithatch</groupId>
-			<artifactId>FX-BorderlessScene</artifactId>
-		</dependency>
         <dependency>
             <groupId>com.dorkbox</groupId>
             <artifactId>Updates</artifactId>
@@ -107,11 +103,6 @@
 			<groupId>com.sshtools</groupId>
 			<artifactId>two-slices</artifactId>
 			<version>0.9.7</version>
-		</dependency>
-		<dependency>
-			<groupId>com.atlassian.commonmark</groupId>
-			<artifactId>commonmark</artifactId>
-			<version>0.15.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.codehaus.groovy</groupId>

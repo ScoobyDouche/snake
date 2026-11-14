@@ -5,13 +5,12 @@ import java.util.prefs.Preferences;
 import uk.co.bithatch.snake.lib.Colors;
 import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Reactive;
-import uk.co.bithatch.snake.ui.ReactiveOptions;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 
-public class ReactiveEffectHandler extends AbstractBackendEffectHandler<Reactive, ReactiveOptions> {
+public class ReactiveEffectHandler extends AbstractBackendEffectHandler<Reactive> {
 
 	public ReactiveEffectHandler() {
-		super(Reactive.class, ReactiveOptions.class);
+		super(Reactive.class);
 	}
 
 	@Override
@@ -26,14 +25,5 @@ public class ReactiveEffectHandler extends AbstractBackendEffectHandler<Reactive
 		prefs.put("color", Colors.toHex(effect.getColor()));
 	}
 
-	@Override
-	protected void onStore(Lit component, ReactiveOptions controller) throws Exception {
-		Reactive reactive = (Reactive) controller.getEffect().clone();
-		reactive.setColor(controller.getColor());
-		reactive.setSpeed(controller.getSpeed());
-		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(reactive));
-		save(component, reactive);
-
-	}
 
 }

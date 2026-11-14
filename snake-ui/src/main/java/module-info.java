@@ -6,8 +6,6 @@ module uk.co.bithatch.snake.ui {
 	requires transitive javafx.swing;
 	requires jdk.zipfs;
 	requires transitive uk.co.bithatch.snake.lib;
-	requires transitive javafx.web;
-	requires com.goxr3plus.fxborderlessscene;
 	requires kotlin.stdlib;
 	requires SystemTray;
 	requires Updates;
@@ -16,7 +14,6 @@ module uk.co.bithatch.snake.ui {
     exports uk.co.bithatch.snake.ui.addons;
     exports uk.co.bithatch.snake.ui.effects;
     exports uk.co.bithatch.snake.ui.util;
-    exports uk.co.bithatch.snake.ui.designer;
     exports uk.co.bithatch.snake.ui.widgets;
     exports uk.co.bithatch.snake.ui.macros;
     exports uk.co.bithatch.snake.ui.drawing;
@@ -24,10 +21,8 @@ module uk.co.bithatch.snake.ui {
     exports uk.co.bithatch.snake.ui.tray;
     opens uk.co.bithatch.snake.ui;
     opens uk.co.bithatch.snake.ui.icons; 
-    opens uk.co.bithatch.snake.ui.designer;
     opens uk.co.bithatch.snake.ui.widgets;
     opens uk.co.bithatch.snake.ui.tray;
-	requires transitive org.commonmark;
 	requires transitive com.sshtools.icongenerator.common;
 	requires javafx.base;
 	requires transitive org.codehaus.groovy;

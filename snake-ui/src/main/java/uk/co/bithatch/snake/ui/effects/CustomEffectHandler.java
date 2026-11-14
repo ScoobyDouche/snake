@@ -22,13 +22,12 @@ import uk.co.bithatch.snake.lib.animation.KeyFrameCell;
 import uk.co.bithatch.snake.lib.animation.Sequence;
 import uk.co.bithatch.snake.lib.effects.Effect;
 import uk.co.bithatch.snake.lib.effects.Matrix;
-import uk.co.bithatch.snake.ui.CustomOptions;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 import uk.co.bithatch.snake.ui.util.Prefs;
 import uk.co.bithatch.snake.ui.util.Strings;
 import uk.co.bithatch.snake.widgets.GeneratedIcon;
 
-public class CustomEffectHandler extends AbstractEffectHandler<Sequence, CustomOptions> {
+public class CustomEffectHandler extends AbstractEffectHandler<Sequence> {
 
 	private static final String PREF_HOLD_FOR = "holdFor";
 	private static final String PREF_FPX = "fps";
@@ -131,10 +130,6 @@ public class CustomEffectHandler extends AbstractEffectHandler<Sequence, CustomO
 		return name;
 	}
 
-	@Override
-	public Class<CustomOptions> getOptionsController() {
-		return CustomOptions.class;
-	}
 
 	public FramePlayer getPlayer() {
 		return player;
@@ -280,10 +275,6 @@ public class CustomEffectHandler extends AbstractEffectHandler<Sequence, CustomO
 		return false;
 	}
 
-	@Override
-	public boolean hasOptions() {
-		return super.hasOptions() && !isReadOnly();
-	}
 
 	@Override
 	protected void onSetContext() {
@@ -291,10 +282,6 @@ public class CustomEffectHandler extends AbstractEffectHandler<Sequence, CustomO
 				getContext().getAudioManager());
 	}
 
-	@Override
-	protected void onStore(Lit component, CustomOptions controller) throws Exception {
-		onSave(getEffectPreferences(component));
-	}
 
 	public KeyFrame load(Preferences node) {
 		var rows = node.getInt("rows", 0);

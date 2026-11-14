@@ -13,11 +13,10 @@ import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Effect;
 import uk.co.bithatch.snake.lib.effects.Matrix;
 import uk.co.bithatch.snake.lib.layouts.Cell;
-import uk.co.bithatch.snake.ui.AbstractEffectController;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 
 public class BlinkEffectHandler
-		extends AbstractEffectHandler<Matrix, AbstractEffectController<Matrix, BlinkEffectHandler>> {
+		extends AbstractEffectHandler<Matrix> {
 
 	private ScheduledFuture<?> task;
 	private boolean on;
@@ -73,10 +72,6 @@ public class BlinkEffectHandler
 		}, 0, 250, TimeUnit.MILLISECONDS);
 	}
 
-	@Override
-	public Class<AbstractEffectController<Matrix, BlinkEffectHandler>> getOptionsController() {
-		throw new UnsupportedOperationException();
-	}
 
 	@Override
 	public boolean isSupported(Lit component) {
@@ -93,10 +88,6 @@ public class BlinkEffectHandler
 		return getClass().getSimpleName();
 	}
 
-	@Override
-	protected void onStore(Lit component, AbstractEffectController<Matrix, BlinkEffectHandler> controller)
-			throws Exception {
-	}
 
 	void frame(Lit component) {
 		synchronized (highlights) {

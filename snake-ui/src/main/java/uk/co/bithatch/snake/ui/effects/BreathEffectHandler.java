@@ -6,12 +6,11 @@ import uk.co.bithatch.snake.lib.Colors;
 import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Breath;
 import uk.co.bithatch.snake.lib.effects.Breath.Mode;
-import uk.co.bithatch.snake.ui.BreathOptions;
 
-public class BreathEffectHandler extends AbstractBackendEffectHandler<Breath, BreathOptions> {
+public class BreathEffectHandler extends AbstractBackendEffectHandler<Breath> {
 
 	public BreathEffectHandler() {
-		super(Breath.class, BreathOptions.class);
+		super(Breath.class);
 	}
 
 	@Override
@@ -30,15 +29,5 @@ public class BreathEffectHandler extends AbstractBackendEffectHandler<Breath, Br
 		prefs.put("color2", Colors.toHex(effect.getColor2()));
 	}
 
-	@Override
-	protected void onStore(Lit component, BreathOptions controller) throws Exception {
-		Breath breath = (Breath) controller.getEffect().clone();
-		breath.setMode(controller.getMode());
-		breath.setColor(controller.getColor());
-		breath.setColor1(controller.getColor1());
-		breath.setColor2(controller.getColor2());
-		apply(component, breath);
-		save(component, breath);
-	}
 
 }

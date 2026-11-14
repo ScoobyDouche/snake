@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
-import com.goxr3plus.fxborderlessscene.borderless.BorderlessScene;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -146,7 +145,6 @@ public class App extends Application implements BackendListener {
 	private SlideyStack stackPane;
 	private Tray tray;
 	private boolean waitingForExitChoice;
-	private Window window;
 	private List<Backend> backends = new ArrayList<>();
 	private AddOnManager addOnManager;
 	private Configuration configuration;
@@ -225,21 +223,6 @@ public class App extends Application implements BackendListener {
 		}
 	}
 
-	public void editMacros(AbstractDeviceController from) throws Exception {
-		Device device = from.getDevice();
-		if (macroManager.isSupported(device)) {
-			Bank bank = push(Bank.class, from, Direction.FROM_BOTTOM);
-			bank.setBank(macroManager.getMacroSystem().getActiveBank(macroManager.getMacroDevice(device)));
-		} else if (device.getCapabilities().contains(Capability.MACRO_PROFILES)) {
-			MacroMap map = push(MacroMap.class, from, Direction.FROM_BOTTOM);
-			map.setMap(device.getActiveProfile().getActiveMap());
-		} else if (device.getCapabilities().contains(Capability.MACROS)) {
-			/* Legacy method */
-			push(Macros.class, from, Direction.FROM_BOTTOM);
-		} else
-			throw new IllegalStateException("Does not support macros.");
-	}
-
 	public EffectManager getEffectManager() {
 		return effectManager;
 	}
@@ -252,9 +235,6 @@ public class App extends Application implements BackendListener {
 		return backend;
 	}
 
-	public Window getWindow() {
-		return window;
-	}
 
 	public boolean isWaitingForExitChoice() {
 		return waitingForExitChoice;
@@ -273,10 +253,31 @@ public class App extends Application implements BackendListener {
 		return addOnManager;
 	}
 
-	public void openDevice(Device device) throws Exception {
+	/** Close every screen (cleaning each up), leaving the window empty. */
+	public void clearScreens() {
+		for (Controller c : new ArrayList<>(controllers)) {
+			try {
+				c.cleanUp();
+			} catch (Exception e) {
+				LOG.log(Level.WARNING, "Failed to clean up " + c.getClass().getSimpleName(), e);
+			}
+		}
 		controllers.clear();
 		stackPane.getChildren().clear();
-		push(DeviceShell.class, Direction.FADE).setDevice(device);
+	}
+
+	public void openDevice(Device device) throws Exception {
+		openDevice(device, null);
+	}
+
+	/** Show a device in the main window, on a page (buttons, lighting, macros ...) or null for the default. */
+	public DeviceShell openDevice(Device device, String page) throws Exception {
+		clearScreens();
+		DeviceShell shell = push(DeviceShell.class, Direction.FADE);
+		if (page != null)
+			shell.setInitialPage(page);
+		shell.setDevice(device);
+		return shell;
 	}
 
 	public <C extends Controller> C openScene(Class<C> controller) throws IOException {
@@ -356,19 +357,11 @@ public class App extends Application implements BackendListener {
 				if (c instanceof AbstractDeviceController && from instanceof AbstractDeviceController) {
 					((AbstractDeviceController) c).setDevice(((AbstractDeviceController) from).getDevice());
 				}
-				if (primaryScene instanceof BorderlessScene) {
-					/* TODO: Not totally sure why ... */
-					setColors(c.getClass(), primaryScene);
-				}
 				return (C) c;
 			}
 		}
 
 		try {
-			if (primaryScene instanceof BorderlessScene) {
-				/* TODO: Not totally sure why ... */
-				setColors(controller, primaryScene);
-			}
 			C fc = openScene(controller, null);
 			controllers.push(fc);
 			stackPane.push(direction, fc.getScene().getRoot());
@@ -464,8 +457,8 @@ public class App extends Application implements BackendListener {
 		if (!argsList.contains("--no-open"))
 			primaryStage.show();
 
-		if (PlatformService.get().isUpdated())
-			push(Changes.class, Direction.FROM_TOP);
+		if (PlatformService.get().isUpdated() && !controllers.isEmpty() && controllers.peek() instanceof DeviceShell)
+			((DeviceShell) controllers.peek()).showChanges();
 
 		/* Autostart by default */
 		if (!PREFS.getBoolean("installed", false)) {
@@ -543,66 +536,36 @@ public class App extends Application implements BackendListener {
 					shell.setInitialPage("devices");
 				shell.setDevice(backend.getDevices().get(0));
 			} else {
-				push(Overview.class, Direction.FADE);
+				push(Notice.class, Direction.FADE);
 			}
 
 		} catch (Exception e) {
 			LOG.log(Level.ERROR, "Failed to initialize.", e);
-			Error fc = openScene(Error.class, null);
-			fc.setError(e);
+			Notice fc = openScene(Notice.class, null);
+			fc.showError(e);
 			stackPane.getChildren().add(fc.getScene().getRoot());
 			controllers.clear();
 			controllers.push(fc);
 		}
 
-		if (configuration.isDecorated()) {
-			if (primaryStage == null) {
-				primaryStage = new Stage(StageStyle.DECORATED);
-				configureStage(primaryStage);
-			} else
-				primaryStage.initStyle(StageStyle.DECORATED);
-			primaryScene = new Scene(anchorPane);
-			setColors(peek().getClass(), primaryScene);
-			primaryStage.setScene(primaryScene);
-			window = null;
-			/* F11 toggles fullscreen */
-			final Stage fs = primaryStage;
-			fs.setFullScreenExitHint("");
-			primaryScene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, ke -> {
-				if (ke.getCode() == javafx.scene.input.KeyCode.F11) {
-					fs.setFullScreen(!fs.isFullScreen());
-					ke.consume();
-				}
-			});
-		} else {
-			if (primaryStage == null) {
-				primaryStage = new Stage(StageStyle.TRANSPARENT);
-				configureStage(primaryStage);
-			} else
-				primaryStage.initStyle(StageStyle.TRANSPARENT);
-
-			window = openScene(Window.class, null);
-			window.getContent().setPrefSize(700, 500);
-			window.getContent().getChildren().add(anchorPane);
-
-			/*
-			 * Create the borderless scene (3rd party library the handles moving and
-			 * resizing when UNDECORATED
-			 */
-			primaryScene = new BorderlessScene(primaryStage, StageStyle.TRANSPARENT, window.getScene().getRoot(), 250,
-					250);
-			((BorderlessScene) primaryScene).setMoveControl(window.getBar());
-			((BorderlessScene) primaryScene).setSnapEnabled(false);
-			((BorderlessScene) primaryScene).removeDefaultCSS();
-
-
-			primaryScene.getRoot().setEffect(new DropShadow());
-			((Region) primaryScene.getRoot()).setPadding(new Insets(10, 10, 10, 10));
-			primaryScene.setFill(Color.TRANSPARENT);
-			
-			setColors(peek().getClass(), primaryScene);
-			primaryStage.setScene(primaryScene);
-		}
+		/* Always the system window frame (the old custom frame broke maximise and resize) */
+		if (primaryStage == null) {
+			primaryStage = new Stage(StageStyle.DECORATED);
+			configureStage(primaryStage);
+		} else
+			primaryStage.initStyle(StageStyle.DECORATED);
+		primaryScene = new Scene(anchorPane);
+		setColors(peek().getClass(), primaryScene);
+		primaryStage.setScene(primaryScene);
+		/* F11 toggles fullscreen */
+		final Stage fs = primaryStage;
+		fs.setFullScreenExitHint("");
+		primaryScene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, ke -> {
+			if (ke.getCode() == javafx.scene.input.KeyCode.F11) {
+				fs.setFullScreen(!fs.isFullScreen());
+				ke.consume();
+			}
+		});
 	}
 
 	protected void initBackend() throws Exception {

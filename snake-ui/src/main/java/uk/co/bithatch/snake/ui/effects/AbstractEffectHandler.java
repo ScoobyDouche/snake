@@ -7,12 +7,10 @@ import java.util.prefs.Preferences;
 import uk.co.bithatch.snake.lib.Device;
 import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.Region;
-import uk.co.bithatch.snake.ui.AbstractEffectController;
 import uk.co.bithatch.snake.ui.App;
 import uk.co.bithatch.snake.ui.EffectHandler;
 
-public abstract class AbstractEffectHandler<E, C extends AbstractEffectController<E, ?>>
-		implements EffectHandler<E, C> {
+public abstract class AbstractEffectHandler<E> implements EffectHandler<E> {
 	final static System.Logger LOG = System.getLogger(AbstractEffectHandler.class.getName());
 
 	protected final static ResourceBundle bundle = ResourceBundle.getBundle(EffectHandler.class.getName());
@@ -58,14 +56,6 @@ public abstract class AbstractEffectHandler<E, C extends AbstractEffectControlle
 		}
 	}
 
-	@Override
-	public final void store(Lit component, C controller) {
-		try {
-			onStore(component, controller);
-		} catch (Exception e) {
-			LOG.log(Level.ERROR, "Failed to update effect.", e);
-		}
-	}
 
 	@Override
 	public void update(Lit component) {
@@ -73,7 +63,6 @@ public abstract class AbstractEffectHandler<E, C extends AbstractEffectControlle
 
 	protected abstract E onActivate(Lit component);
 
-	protected abstract void onStore(Lit component, C controller) throws Exception;
 
 	protected void onSetContext() {
 	}

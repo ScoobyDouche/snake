@@ -7,12 +7,11 @@ import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Starlight;
 import uk.co.bithatch.snake.lib.effects.Starlight.Mode;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
-import uk.co.bithatch.snake.ui.StarlightOptions;
 
-public class StarlightEffectHandler extends AbstractBackendEffectHandler<Starlight, StarlightOptions> {
+public class StarlightEffectHandler extends AbstractBackendEffectHandler<Starlight> {
 
 	public StarlightEffectHandler() {
-		super(Starlight.class, StarlightOptions.class);
+		super(Starlight.class);
 	}
 
 	@Override
@@ -33,17 +32,5 @@ public class StarlightEffectHandler extends AbstractBackendEffectHandler<Starlig
 		prefs.putInt("speed", effect.getSpeed());
 	}
 
-	@Override
-	protected void onStore(Lit component, StarlightOptions controller) throws Exception {
-		Starlight starlight = (Starlight) controller.getEffect().clone();
-		starlight.setMode(controller.getMode());
-		starlight.setColor(controller.getColor());
-		starlight.setColor1(controller.getColor1());
-		starlight.setColor2(controller.getColor2());
-		starlight.setSpeed(controller.getSpeed());
-		getContext().getSchedulerManager().get(Queue.DEVICE_IO).execute(() -> component.setEffect(starlight));
-		save(component, starlight);
-
-	}
 
 }

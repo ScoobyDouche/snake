@@ -10,7 +10,7 @@ import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Effect;
 import uk.co.bithatch.snake.lib.effects.Matrix;
 
-public interface EffectHandler<E, C extends AbstractEffectController<E, ?>> {
+public interface EffectHandler<E> {
 
 	default String getName() {
 		return getClass().getSimpleName();
@@ -30,11 +30,7 @@ public interface EffectHandler<E, C extends AbstractEffectController<E, ?>> {
 
 	void open(App context, Device component);
 
-	Class<C> getOptionsController();
 
-	default boolean hasOptions() {
-		return getOptionsController() != null;
-	}
 
 	default void added(Device device) {
 	}
@@ -42,7 +38,6 @@ public interface EffectHandler<E, C extends AbstractEffectController<E, ?>> {
 	default void removed(Device device) {
 	}
 
-	void store(Lit component, C controller);
 
 	void update(Lit component);
 

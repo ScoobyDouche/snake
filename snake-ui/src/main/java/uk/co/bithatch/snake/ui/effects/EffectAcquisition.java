@@ -10,16 +10,16 @@ import uk.co.bithatch.snake.ui.EffectHandler;
 public interface EffectAcquisition extends AutoCloseable {
 
 	public interface EffectChangeListener {
-		void effectChanged(Lit component, EffectHandler<?, ?> effect);
+		void effectChanged(Lit component, EffectHandler<?> effect);
 	}
 
 	<E extends Effect> E getEffectInstance(Lit component);
 
 	Device getDevice();
 
-	EffectHandler<?, ?> getEffect(Lit lit);
+	EffectHandler<?> getEffect(Lit lit);
 
-	void activate(Lit lit, EffectHandler<?, ?> effect);
+	void activate(Lit lit, EffectHandler<?> effect);
 
 	void deactivate(Lit lit);
 
@@ -33,5 +33,5 @@ public interface EffectAcquisition extends AutoCloseable {
 
 	void removeListener(EffectChangeListener listener);
 
-	<E extends EffectHandler<?, ?>> E activate(Lit lit, Class<E> class1);
+	<E extends EffectHandler<?>> E activate(Lit lit, Class<E> class1);
 }

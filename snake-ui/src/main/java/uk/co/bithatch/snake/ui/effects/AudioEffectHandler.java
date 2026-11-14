@@ -15,12 +15,11 @@ import uk.co.bithatch.snake.lib.Device;
 import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.effects.Effect;
 import uk.co.bithatch.snake.lib.effects.Matrix;
-import uk.co.bithatch.snake.ui.AudioOptions;
 import uk.co.bithatch.snake.ui.SchedulerManager.Queue;
 import uk.co.bithatch.snake.ui.audio.AudioManager.Listener;
 import uk.co.bithatch.snake.ui.drawing.MatrixBacking;
 
-public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix, AudioOptions> {
+public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix> {
 
 	public final static int[] BLACK = new int[3];
 
@@ -42,7 +41,7 @@ public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix, 
 	private RGBCanvas canvas;
 
 	public AudioEffectHandler() {
-		super(Matrix.class, AudioOptions.class);
+		super(Matrix.class);
 	}
 
 	@Override
@@ -111,10 +110,6 @@ public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix, 
 		canvas.reset();
 	}
 
-	@Override
-	public Class<AudioOptions> getOptionsController() {
-		return AudioOptions.class;
-	}
 
 	@Override
 	public boolean isSupported(Lit component) {
@@ -162,25 +157,25 @@ public class AudioEffectHandler extends AbstractPersistentEffectHandler<Matrix, 
 
 	@Override
 	protected void onSave(Preferences prefs, Matrix effect) {
-		prefs.put("mode", mode == null ? "" : modeClass.getName());
+		prefs.put("mode", modeClass.getName());
 		prefs.put("color1", Colors.toHex(color1));
 		prefs.put("color2", Colors.toHex(color2));
 		prefs.put("color3", Colors.toHex(color3));
 	}
 
-	@Override
-	protected void onStore(Lit component, AudioOptions controller) throws Exception {
-		color1 = controller.getColor1();
-		color2 = controller.getColor2();
-		color3 = controller.getColor3();
-		if (!controller.getMode().equals(modeClass)) {
-			modeClass = controller.getMode();
-			createMode();
+
+	/** Change the settings (used by the Lighting page). */
+	public void configure(Lit component, Class<? extends AudioEffectMode> newMode, int[] c1, int[] c2, int[] c3) {
+		color1 = c1;
+		color2 = c2;
+		color3 = c3;
+		if (newMode != null && !newMode.equals(modeClass)) {
+			modeClass = newMode;
+			if (canvas != null)
+				createMode();
 		}
-		if (impulse != null) {
-			impulse.setSourceIndex(controller.getSource() == null ? 0 : controller.getSource().getIndex());
-		}
-		mode.update();
+		if (mode != null)
+			mode.update();
 		save(component, null);
 	}
 
