@@ -54,6 +54,7 @@ import uk.co.bithatch.linuxio.EventCode.Ev;
 import uk.co.bithatch.snake.lib.BrandingImage;
 import uk.co.bithatch.snake.lib.Capability;
 import uk.co.bithatch.snake.lib.Device;
+import uk.co.bithatch.snake.lib.OnboardProfiles;
 import uk.co.bithatch.snake.lib.DeviceType;
 import uk.co.bithatch.snake.lib.Key;
 import uk.co.bithatch.snake.lib.Macro;
@@ -1312,6 +1313,45 @@ public class NativeRazerDevice implements Device {
 	public void close() throws Exception {
 		if (batteryTask != null)
 			batteryTask.cancel(false);
+		synchronized (this) {
+			if (onboard != null) {
+				onboard.close();
+				onboard = null;
+			}
+		}
+	}
+
+	private RazerOnboardProfiles onboard;
+	private boolean onboardTried;
+	private String onboardError;
+
+	@Override
+	public synchronized OnboardProfiles getOnboardProfiles() {
+		if (onboard == null && !onboardTried) {
+			onboardTried = true;
+			int[] vp = device.getVidPid();
+			if (vp == null || vp.length < 2 || vp[0] != RazerOnboardProfiles.VID || getType() != DeviceType.MOUSE)
+				return null;
+			try {
+				onboard = RazerOnboardProfiles.open(vp[1]);
+				onboardError = null;
+			} catch (Exception e) {
+				onboardError = e.getMessage();
+				onboardTried = false; /* e.g. no permission yet: try again next time */
+				LOG.log(Level.WARNING, "Cannot open onboard profiles.", e);
+			}
+		}
+		return onboard;
+	}
+
+	@Override
+	public int[] getUsbIds() {
+		return device.getVidPid();
+	}
+
+	@Override
+	public String getOnboardProfilesError() {
+		return onboardError;
 	}
 
 	@Override

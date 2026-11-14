@@ -6,3 +6,7 @@
 dependency-reduced-pom.xml
 target/
 hs_err_pid*.log
+
+# local notes, never commit
+.remember/
+docs/superpowers/

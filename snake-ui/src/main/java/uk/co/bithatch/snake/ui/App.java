@@ -276,10 +276,7 @@ public class App extends Application implements BackendListener {
 	public void openDevice(Device device) throws Exception {
 		controllers.clear();
 		stackPane.getChildren().clear();
-		if (backend.getDevices().size() != 1) {
-			push(Overview.class, Direction.FADE);
-		}
-		push(DeviceDetails.class, Direction.FADE).setDevice(device);
+		push(DeviceShell.class, Direction.FADE).setDevice(device);
 	}
 
 	public <C extends Controller> C openScene(Class<C> controller) throws IOException {
@@ -323,6 +320,8 @@ public class App extends Application implements BackendListener {
 			ss.add(parentTheme.getResource(App.class.getSimpleName() + ".css").toExternalForm());
 		}
 		Strings.addIfNotAdded(ss, theme.getResource(App.class.getSimpleName() + ".css").toExternalForm());
+		/* the redesigned look, applied on top of every theme */
+		Strings.addIfNotAdded(ss, App.class.getResource("Redesign.css").toExternalForm());
 		URL controllerCssUrl = controller.getResource(controller.getSimpleName() + ".css");
 		if (controllerCssUrl != null)
 			Strings.addIfNotAdded(ss, controllerCssUrl.toExternalForm());
@@ -400,6 +399,13 @@ public class App extends Application implements BackendListener {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
+		for (String f : new String[] { "Barlow-Regular", "Barlow-Medium", "Barlow-SemiBold",
+				"BarlowSemiCondensed-Medium", "BarlowSemiCondensed-SemiBold" }) {
+			try (var in = App.class.getResourceAsStream("fonts/" + f + ".ttf")) {
+				if (javafx.scene.text.Font.loadFont(in, 14) == null)
+					LOG.log(Level.WARNING, "Could not load font " + f);
+			}
+		}
 
 		/* Clicking the shortcut again while running (e.g. in the tray) shows the window */
 		if (PlatformService.isPlatformSupported())
@@ -530,8 +536,12 @@ public class App extends Application implements BackendListener {
 			if (!macroManager.isStarted())
 				macroManager.start();
 			controllers.clear();
-			if (backend.getDevices().size() == 1) {
-				push(DeviceDetails.class, Direction.FADE).setDevice(backend.getDevices().get(0));
+			if (backend.getDevices().size() > 0) {
+				/* the device page has its own Devices list for switching */
+				DeviceShell shell = push(DeviceShell.class, Direction.FADE);
+				if (backend.getDevices().size() > 1)
+					shell.setInitialPage("devices");
+				shell.setDevice(backend.getDevices().get(0));
 			} else {
 				push(Overview.class, Direction.FADE);
 			}
@@ -555,6 +565,15 @@ public class App extends Application implements BackendListener {
 			setColors(peek().getClass(), primaryScene);
 			primaryStage.setScene(primaryScene);
 			window = null;
+			/* F11 toggles fullscreen */
+			final Stage fs = primaryStage;
+			fs.setFullScreenExitHint("");
+			primaryScene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, ke -> {
+				if (ke.getCode() == javafx.scene.input.KeyCode.F11) {
+					fs.setFullScreen(!fs.isFullScreen());
+					ke.consume();
+				}
+			});
 		} else {
 			if (primaryStage == null) {
 				primaryStage = new Stage(StageStyle.TRANSPARENT);

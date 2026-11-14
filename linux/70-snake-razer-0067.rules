@@ -1,0 +1,5 @@
+# Lets Snake read and save the onboard profiles of a Razer Naga Trinity (1532:0067).
+# Only the user logged in at the seat gets access (uaccess), only for this mouse.
+# Snake writes one line like this per mouse from its "Enable onboard profiles" button. Manual install:
+#   sudo cp linux/70-snake-razer-0067.rules /etc/udev/rules.d/ && sudo udevadm trigger
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="0067", TAG+="uaccess"

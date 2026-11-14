@@ -49,6 +49,8 @@ class SoftwareAnimator {
 		failures = 0;
 		long started = System.currentTimeMillis();
 		task = context.getSchedulerManager().get(Queue.DEVICE_IO).scheduleAtFixedRate(() -> {
+			if (SoftwareEffects.isPaused())
+				return;
 			try {
 				int[] rgb = frame.colorAt(System.currentTimeMillis() - started);
 				if (Arrays.equals(rgb, last))

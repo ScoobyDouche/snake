@@ -1,0 +1,378 @@
+/*
+ * Snake's look: black, quiet greys, Razer green only for what is selected or
+ * the main action. Barlow for text, Barlow Semi Condensed for titles.
+ * Loaded after the theme, so it wins over the old styles.
+ */
+.root {
+	-snake-black: #000000;
+	-snake-surface: #141414;
+	-snake-raised: #1d1d1d;
+	-snake-line: #2b2b2b;
+	-snake-line-hover: #4a4a4a;
+	-snake-text: #e8e8e8;
+	-snake-muted: #8f8f8f;
+	-snake-green: #44d62c;
+	-snake-error: #ff6b6b;
+	-fx-font-family: "Barlow";
+	-fx-font-size: 14px;
+	-fx-base: #1d1d1d;
+	-fx-background: #000000;
+	-fx-control-inner-background: #141414;
+	-fx-accent: #44d62c;
+	-fx-focus-color: #44d62c;
+	-fx-faint-focus-color: transparent;
+	-fx-text-base-color: #e8e8e8;
+	-fx-text-background-color: #e8e8e8;
+}
+
+.rootPane, .shell {
+	-fx-background-color: -snake-black;
+}
+
+.label {
+	-fx-text-fill: -snake-text;
+}
+
+/* old title fonts -> Barlow */
+.title, .subtitle, .header, .titleBar {
+	-fx-font-family: "Barlow Semi Condensed";
+	-fx-font-weight: 600;
+}
+
+/* ---- window bar ---- */
+.titleBar {
+	-fx-text-fill: -snake-green;
+	-fx-font-size: 20px;
+}
+
+/* ---- device page frame ---- */
+.shellNav {
+	-fx-background-color: -snake-black;
+	-fx-border-color: transparent -snake-line transparent transparent;
+	-fx-padding: 14 0 14 0;
+	-fx-pref-width: 200;
+	-fx-min-width: 200;
+}
+.navItem {
+	-fx-background-color: transparent;
+	-fx-background-radius: 0;
+	-fx-border-color: transparent;
+	-fx-border-width: 0 0 0 3;
+	-fx-alignment: center-left;
+	-fx-padding: 11 22 11 19;
+	-fx-text-fill: -snake-muted;
+	-fx-font-family: "Barlow Semi Condensed";
+	-fx-font-weight: 500;
+	-fx-font-size: 16px;
+	-fx-cursor: hand;
+	-fx-border-insets: 0;
+}
+.navItem:hover {
+	-fx-text-fill: -snake-text;
+}
+.navItem.selected {
+	-fx-text-fill: -snake-text;
+	-fx-background-color: -snake-surface;
+	-fx-border-color: -snake-green;
+}
+.navSeparator {
+	-fx-min-height: 1;
+	-fx-max-height: 1;
+	-fx-background-color: -snake-line;
+	-fx-translate-x: 22;
+	-fx-max-width: 156;
+	-fx-padding: 0;
+}
+.shellNav .navSeparator {
+	-fx-border-insets: 12 0 12 0;
+}
+.shellHeader {
+	-fx-padding: 12 24 12 36;
+	-fx-border-color: transparent transparent -snake-line transparent;
+	-fx-min-height: 56;
+}
+.shellDevice {
+	-fx-font-family: "Barlow Semi Condensed";
+	-fx-font-weight: 600;
+	-fx-font-size: 18px;
+}
+.muted {
+	-fx-text-fill: -snake-muted;
+}
+.shellFooter {
+	-fx-padding: 10 20 10 36;
+	-fx-border-color: -snake-line transparent transparent transparent;
+	-fx-min-height: 40;
+}
+.shellFooter .label {
+	-fx-text-fill: -snake-muted;
+	-fx-font-size: 13px;
+}
+.shellFooter .label.error, .label.error {
+	-fx-text-fill: -snake-error;
+}
+.shellScroll, .shellScroll > .viewport {
+	-fx-background-color: transparent;
+	-fx-background: transparent;
+	-fx-border-color: transparent;
+}
+
+/* ---- pages ---- */
+.page {
+	-fx-padding: 26 36 36 36;
+	-fx-spacing: 14;
+}
+.pageTitle {
+	-fx-font-family: "Barlow Semi Condensed";
+	-fx-font-weight: 600;
+	-fx-font-size: 26px;
+}
+.lede {
+	-fx-text-fill: -snake-muted;
+	-fx-font-size: 15px;
+	-fx-padding: 0 0 10 0;
+}
+.sectionTitle {
+	-fx-font-family: "Barlow Semi Condensed";
+	-fx-font-weight: 600;
+	-fx-font-size: 17px;
+	-fx-padding: 6 0 0 0;
+}
+.hint {
+	-fx-text-fill: -snake-muted;
+	-fx-font-size: 13.5px;
+}
+.fieldLabel {
+	-fx-text-fill: -snake-muted;
+	-fx-font-size: 13px;
+	-fx-padding: 8 0 0 0;
+}
+.divider {
+	-fx-min-height: 1;
+	-fx-max-height: 1;
+	-fx-max-width: 720;
+	-fx-background-color: -snake-line;
+}
+
+/* ---- buttons ---- */
+.button, .toggle-button, .combo-box, .color-picker, .spinner {
+	-fx-background-color: -snake-surface;
+	-fx-background-radius: 3;
+	-fx-border-color: -snake-line;
+	-fx-border-radius: 3;
+	-fx-text-fill: -snake-text;
+	-fx-font-family: "Barlow";
+}
+.button:hover, .toggle-button:hover, .combo-box:hover, .color-picker:hover {
+	-fx-border-color: -snake-line-hover;
+}
+.button.primary {
+	-fx-background-color: -snake-green;
+	-fx-border-color: -snake-green;
+	-fx-text-fill: #000000;
+	-fx-font-weight: 600;
+	-fx-padding: 8 18 8 18;
+}
+.button.primary:disabled {
+	-fx-opacity: 0.35;
+}
+.button.ghost {
+	-fx-background-color: transparent;
+	-fx-padding: 8 16 8 16;
+}
+.segment {
+	-fx-background-color: transparent;
+	-fx-text-fill: -snake-muted;
+	-fx-padding: 5 12 5 12;
+}
+.segment:selected {
+	-fx-border-color: -snake-green;
+	-fx-text-fill: -snake-text;
+}
+
+/* ---- Buttons page ---- */
+.buttonStage {
+	-fx-min-height: 540;
+	-fx-padding: 10 0 0 0;
+}
+.slot {
+	-fx-alignment: center-left;
+	-fx-padding: 7 12 7 12;
+	-fx-pref-width: 165;
+	-fx-min-width: 165;
+	-fx-cursor: hand;
+}
+.slot.compact {
+	-fx-pref-width: 78;
+	-fx-min-width: 78;
+}
+.slot.selected {
+	-fx-border-color: -snake-green;
+}
+.slotName {
+	-fx-font-size: 14.5px;
+}
+.slotAction {
+	-fx-text-fill: -snake-muted;
+	-fx-font-size: 12.5px;
+}
+.slotGrid {
+	-fx-hgap: 8;
+	-fx-vgap: 8;
+}
+.calloutLine {
+	-fx-stroke: -snake-green;
+	-fx-stroke-width: 1;
+	-fx-fill: transparent;
+}
+.calloutDot {
+	-fx-stroke: -snake-green;
+	-fx-stroke-width: 2;
+	-fx-fill: transparent;
+}
+.shellEditor {
+	-fx-background-color: -snake-surface;
+	-fx-border-color: transparent transparent transparent -snake-line;
+	-fx-padding: 24;
+	-fx-pref-width: 330;
+	-fx-min-width: 330;
+}
+.choiceGrid {
+	-fx-hgap: 6;
+	-fx-vgap: 6;
+}
+.choiceGrid .segment {
+	-fx-pref-width: 136;
+}
+.keyCapture {
+	-fx-background-color: #000000;
+	-fx-border-style: segments(4, 3);
+	-fx-border-color: #555555;
+	-fx-text-fill: -snake-muted;
+	-fx-padding: 14;
+}
+.keyCapture:focused {
+	-fx-border-color: -snake-green;
+	-fx-text-fill: -snake-text;
+}
+
+/* ---- Performance ---- */
+.stageTile {
+	-fx-background-color: -snake-surface;
+	-fx-border-color: -snake-line;
+	-fx-border-radius: 3;
+	-fx-background-radius: 3;
+	-fx-padding: 12;
+	-fx-pref-width: 142;
+}
+.stageTile.on {
+	-fx-border-color: -snake-green;
+}
+.stageSpinner {
+	-fx-pref-width: 118;
+	-fx-font-size: 18px;
+}
+.stageLabel {
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
+	-fx-text-fill: -snake-muted;
+	-fx-padding: 0;
+	-fx-font-size: 13px;
+}
+.stageLabel:selected {
+	-fx-text-fill: -snake-green;
+}
+
+/* ---- Lighting ---- */
+.zoneGrid {
+	-fx-hgap: 18;
+	-fx-vgap: 14;
+	-fx-alignment: center-left;
+}
+.swatch {
+	-fx-min-width: 26;
+	-fx-min-height: 26;
+	-fx-max-width: 26;
+	-fx-max-height: 26;
+	-fx-border-color: -snake-line;
+	-fx-padding: 0;
+}
+.swatch:hover {
+	-fx-border-color: -snake-text;
+}
+
+/* ---- Devices ---- */
+.deviceCard {
+	-fx-background-color: transparent;
+	-fx-pref-width: 236;
+	-fx-padding: 16;
+	-fx-alignment: top-left;
+	-fx-cursor: hand;
+}
+.deviceCard.selected {
+	-fx-border-color: -snake-green;
+}
+
+/* ---- Settings ---- */
+.settingsGrid {
+	-fx-hgap: 40;
+	-fx-vgap: 22;
+}
+.settingName {
+	-fx-font-size: 15px;
+}
+
+/* ---- common controls ---- */
+.combo-box .list-cell {
+	-fx-text-fill: -snake-text;
+	-fx-background-color: transparent;
+}
+.combo-box-popup .list-view {
+	-fx-background-color: -snake-surface;
+	-fx-border-color: -snake-line;
+}
+.combo-box-popup .list-cell {
+	-fx-background-color: -snake-surface;
+	-fx-text-fill: -snake-text;
+	-fx-padding: 6 10 6 10;
+}
+.combo-box-popup .list-cell:hover, .combo-box-popup .list-cell:selected {
+	-fx-background-color: -snake-raised;
+}
+.spinner .text-field {
+	-fx-background-color: transparent;
+	-fx-text-fill: -snake-text;
+}
+.slider .track {
+	-fx-background-color: -snake-line;
+	-fx-pref-height: 4;
+}
+.slider .thumb {
+	-fx-background-color: -snake-green;
+	-fx-background-radius: 8;
+	-fx-padding: 7;
+}
+.check-box .box {
+	-fx-background-color: -snake-surface;
+	-fx-border-color: -snake-line;
+}
+.check-box:selected .mark {
+	-fx-background-color: #000000;
+}
+.check-box:selected .box {
+	-fx-background-color: -snake-green;
+}
+.scroll-bar {
+	-fx-background-color: transparent;
+}
+.scroll-bar .thumb {
+	-fx-background-color: -snake-line;
+	-fx-background-radius: 4;
+}
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+	-fx-padding: 0;
+}
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+	-fx-shape: "";
+	-fx-padding: 0;
+}

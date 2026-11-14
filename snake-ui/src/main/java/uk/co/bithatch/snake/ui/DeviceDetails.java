@@ -28,6 +28,7 @@ import javafx.scene.layout.VBox;
 import uk.co.bithatch.snake.lib.BrandingImage;
 import uk.co.bithatch.snake.lib.Capability;
 import uk.co.bithatch.snake.lib.Device;
+import uk.co.bithatch.snake.lib.DeviceType;
 import uk.co.bithatch.snake.lib.Lit;
 import uk.co.bithatch.snake.lib.layouts.Accessory;
 import uk.co.bithatch.snake.lib.layouts.Accessory.AccessoryType;
@@ -53,6 +54,7 @@ public class DeviceDetails extends AbstractDetailsController implements Listener
 	private Hyperlink macros;
 	@FXML
 	private Hyperlink design;
+
 	@FXML
 	private Region background;
 	@FXML

@@ -99,6 +99,24 @@ public interface Device extends AutoCloseable, Grouping, Lit {
 
 	String getSerial();
 
+	/**
+	 * Profiles stored in the device itself, or {@code null} if this device has none
+	 * Snake can access.
+	 */
+	default OnboardProfiles getOnboardProfiles() {
+		return null;
+	}
+
+	/** USB vendor and product id, or null if unknown. */
+	default int[] getUsbIds() {
+		return null;
+	}
+
+	/** Why onboard profiles could not be opened (e.g. no permission), or null. */
+	default String getOnboardProfilesError() {
+		return null;
+	}
+
 	DeviceType getType();
 
 	void importMacros(String macros);

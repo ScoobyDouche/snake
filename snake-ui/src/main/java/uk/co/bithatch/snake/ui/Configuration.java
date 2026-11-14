@@ -23,7 +23,8 @@ public class Configuration implements PreferenceChangeListener {
 	public static final String PREF_AUDIO_FPS = "audioFPS";
 	public static final String PREF_AUDIO_SOURCE = "audioSource";
 	public static final String PREF_TURN_OFF_ON_EXIT = "turnOffOnExit";
-	public static final String PREF_DECORATED = "decorated";
+	/* new key so everyone moves to the system window frame (the custom frame broke maximise/resize) */
+	public static final String PREF_DECORATED = "systemFrame";
 	public static final String PREF_TRAY_ICON = "trayIcon";
 	public static final String PREF_WHEN_LOW = "whenLow";
 	public static final String PREF_SHOW_BATTERY = "showBattery";
@@ -52,7 +53,7 @@ public class Configuration implements PreferenceChangeListener {
 		showBattery = node.getBoolean(PREF_SHOW_BATTERY, true);
 		whenLow = node.getBoolean(PREF_WHEN_LOW, true);
 		trayIcon = TrayIcon.valueOf(node.get(PREF_TRAY_ICON, TrayIcon.AUTO.name()));
-		decorated = node.getBoolean(PREF_DECORATED, false);
+		decorated = node.getBoolean(PREF_DECORATED, true);
 		turnOffOnExit = node.getBoolean(PREF_TURN_OFF_ON_EXIT, true);
 		audioSource = node.get(PREF_AUDIO_SOURCE, "");
 		audioFPS = node.getInt(PREF_AUDIO_FPS, 10);

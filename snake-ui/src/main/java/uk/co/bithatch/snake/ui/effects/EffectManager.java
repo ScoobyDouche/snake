@@ -277,6 +277,8 @@ public class EffectManager implements BackendListener, Closeable {
 	}
 
 	public static final String PREF_EFFECT = "effect";
+	/** Device pref: true when the device's own saved lighting is used and no live effect runs. */
+	public static final String PREF_SAVED_LIGHTING = "savedLighting";
 	public static final String PREF_SYNC = "sync";
 
 	final static System.Logger LOG = System.getLogger(EffectManager.class.getName());
@@ -553,6 +555,10 @@ public class EffectManager implements BackendListener, Closeable {
 
 			/* Acquire an effects controller for this device */
 			EffectAcquisition acq = acquire(dev);
+
+			/* User chose the lighting saved on the device itself: don't start any effect */
+			if (context.getPreferences(dev).getBoolean(PREF_SAVED_LIGHTING, false))
+				return;
 
 			EffectHandler<?, ?> deviceEffect = usable(dev, acq.getEffect(dev));
 			boolean activated = false;

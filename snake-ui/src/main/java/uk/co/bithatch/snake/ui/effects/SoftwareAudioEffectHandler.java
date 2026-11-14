@@ -65,7 +65,8 @@ public class SoftwareAudioEffectHandler extends AudioEffectHandler {
 		Static s = device.createEffect(Static.class);
 		s.setColor(rgb);
 		/* updateEffect doesn't fire change events for every frame */
-		device.updateEffect(s);
+		if (!SoftwareEffects.isPaused())
+			device.updateEffect(s);
 	}
 
 	@Override

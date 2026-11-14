@@ -198,7 +198,7 @@ public class Overview extends AbstractController implements Listener, BackendLis
 
 		devices.setOnMouseClicked((e) -> {
 			if (e.getClickCount() == 2) {
-				context.push(DeviceDetails.class, this, Direction.FROM_RIGHT)
+				context.push(DeviceShell.class, this, Direction.FROM_RIGHT)
 						.setDevice(deviceMap.get(devices.getSelectionModel().getSelectedItem()).getDevice());
 			}
 

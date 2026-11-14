@@ -101,7 +101,7 @@ public class DeviceOverview extends AbstractDeviceController implements Listener
 
 	@FXML
 	void evtSelect() {
-		context.push(DeviceDetails.class, this, Direction.FROM_RIGHT);
+		context.push(DeviceShell.class, this, Direction.FROM_RIGHT);
 	}
 
 	@FXML

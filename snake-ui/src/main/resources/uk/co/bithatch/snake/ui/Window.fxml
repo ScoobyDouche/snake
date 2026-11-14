@@ -13,7 +13,7 @@
    <top>
       <BorderPane fx:id="titleBar" BorderPane.alignment="CENTER_RIGHT">
          <left>
-            <HBox alignment="CENTER" fillHeight="false" styleClass="iconBar" BorderPane.alignment="CENTER">
+            <HBox alignment="CENTER" fillHeight="false" managed="false" styleClass="iconBar" visible="false" BorderPane.alignment="CENTER">
                <children>
                   <Hyperlink onAction="#evtAbout" styleClass="iconButton">
                      <graphic>

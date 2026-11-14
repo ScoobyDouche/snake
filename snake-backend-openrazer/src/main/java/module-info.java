@@ -1,7 +1,8 @@
 module uk.co.bithatch.snake.lib.backend.openrazer {
     requires transitive uk.co.bithatch.snake.lib;
 	requires transitive uk.co.bithatch.linuxio;
-	requires transitive org.freedesktop.dbus; 
+	requires transitive org.freedesktop.dbus;
+	requires com.sun.jna;
 	provides uk.co.bithatch.snake.lib.Backend with uk.co.bithatch.snake.lib.backend.openrazer.OpenRazerBackend;
 	exports uk.co.bithatch.snake.lib.backend.openrazer;
 }
