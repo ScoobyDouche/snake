@@ -10,7 +10,7 @@ which stopped being developed in 2021 and no longer builds or runs properly on
 current Linux. This fork targets a Razer Naga Trinity on Linux Mint 22, but
 should work with anything OpenRazer supports.
 
-![Performance page: DPI stages and polling rate](images/performance.png "Performance")
+![Buttons page: the mouse with each button labelled](images/page-buttons.png "Buttons")
 
 ## What's new in this fork
 
@@ -81,11 +81,15 @@ you allow "Experimental saving" in Settings.
 - The profile picker at the top right picks which profile you're editing.
   The button under the mouse switches between them.
 
-![Lighting page](images/lighting.png "Lighting")
+![Devices page](images/page-devices.png "Devices")
 
-![Macros page with the macro editor open](images/macros.png "Macros")
+![Performance page: DPI stages and polling rate](images/page-performance.png "Performance")
 
-![Settings page](images/settings.png "Settings")
+![Lighting page](images/page-lighting.png "Lighting")
+
+![Macros page with the macro editor open](images/page-macros.png "Macros")
+
+![Settings page](images/page-settings.png "Settings")
 
 ## Updates
 
@@ -101,6 +105,8 @@ The launcher's log is in `~/.cache/snake/launcher.log`.
 
 GPL-3.0, same as the original. Original code copyright Brett Smith and
 contributors; see [LICENSE](LICENSE) and [other-licenses](other-licenses).
+The mouse photos in the screenshots are Razer's product images, which Snake
+downloads at runtime through OpenRazer.
 The Barlow fonts are under the SIL Open Font License (see `OFL.txt` next to them).
 Razer, Naga and Synapse are trademarks of Razer Inc.; this project is not
 affiliated with Razer.
